@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}About — RNews{% endblock %}
+
+{% block content %}
+<div class="about-page">
+  <h2>About RNews</h2>
+
+  <section>
+    <h3>What is RNews?</h3>
+    <p>
+      RNews is a community-driven aggregator for scientific papers and links,
+      built for researchers who want a fast, minimalist way to discover,
+      share, and discuss the literature that matters.
+    </p>
+  </section>
+
+  <section>
+    <h3>Submitting items</h3>
+    <p>
+      Any registered user can submit a link or a scientific paper.
+      For papers, paste the URL (DOI, arXiv, PubMed, or any journal page)
+      and click <strong>Fetch metadata</strong> — the system will try to
+      automatically fill in the journal, authors, and publication date using
+      CrossRef, arXiv, PubMed, and optionally a local
+      <a href="https://github.com/zotero/translation-server" target="_blank" rel="noopener">Zotero translation server</a>.
+    </p>
+  </section>
+
+  <section>
+    <h3>Tags</h3>
+    <p>
+      Every item requires at least one tag. Tags are lowercase, shared across
+      all users, and color-coded for quick scanning. You can save tags to your
+      profile and use them to filter your personal page or team pages.
+    </p>
+  </section>
+
+  <section>
+    <h3>Teams</h3>
+    <p>
+      Teams are private or public spaces where groups of researchers can
+      curate their own feed. Items submitted directly to a team are
+      team-only; items shared from the main feed keep their public presence
+      while also appearing in the team. Roles: <em>admin</em>, <em>contributor</em>, <em>viewer</em>.
+    </p>
+  </section>
+
+  <section>
+    <h3>Voting &amp; comments</h3>
+    <p>
+      Upvote items and comments. Click a title to open the comment thread,
+      where replies are nested Reddit-style and sorted by score.
+    </p>
+  </section>
+
+  <section>
+    <h3>Search &amp; permalinks</h3>
+    <p>
+      The search bar at the top supports full-text title search.
+      Toggle <em>by tag</em> to find items matching specific tags —
+      the resulting URL is a stable permalink you can bookmark or share.
+    </p>
+  </section>
+
+</div>
+{% endblock %}

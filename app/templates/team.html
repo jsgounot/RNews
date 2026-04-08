@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% from "macros.html" import item_row %}
+
+{% block title %}{{ team.name }} — RNews{% endblock %}
+
+{% block content %}
+<div class="page-team">
+
+  {# Team header #}
+  <div class="team-page-header">
+    <div>
+      <h2 class="team-page-name">
+        {{ team.name }}
+        <span class="team-visibility-badge {% if team.is_public %}badge-public{% else %}badge-private{% endif %}">
+          {% if team.is_public %}public{% else %}🔒 private{% endif %}
+        </span>
+      </h2>
+      {% if team.description %}<p class="team-page-desc">{{ team.description }}</p>{% endif %}
+      <div class="team-page-meta">
+        <span>{{ members | length }} member{% if members | length != 1 %}s{% endif %}</span>
+        {% if role %}<span class="team-role role-{{ role }}">You: {{ role }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="team-page-actions">
+      {% if role in ('admin', 'contributor') %}
+        <a href="/teams/{{ team.slug }}/submit" class="btn-primary">+ Submit to team</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Flash messages #}
+  {% set err = request.query_params.get('error', '') %}
+  {% set suc = request.query_params.get('success', '') %}
+  {% if err %}<div class="form-error">{{ err }}</div>{% endif %}
+  {% if suc %}<div class="form-success">{{ suc }}</div>{% endif %}
+
+  {# Tag filter #}
+  {% if team_tags %}
+  <div class="team-tag-filter">
+    <span class="section-label">Filter:</span>
+    <a href="/teams/{{ team.slug }}?days={{ days }}&limit={{ limit }}&sort={{ sort }}"
+       class="tag-chip-filter {% if not active_tag %}active{% endif %}">all</a>
+    {% for t in team_tags %}
+    <a href="/teams/{{ team.slug }}?tag={{ t.slug }}&days={{ days }}&limit={{ limit }}&sort={{ sort }}"
+       class="tag-chip {% if active_tag == t.slug %}tag-chip-active{% endif %}"
+       style="background:{{ tag_color(t.name) }}"
+    >#{{ t.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# Period / limit / sort options #}
+  {% set tbase = '/teams/' ~ team.slug %}
+  {% set tq = '&tag=' ~ active_tag if active_tag else '' %}
+  <div class="options-bar">
+    <div class="period-options">
+      <span class="options-label">Top</span>
+      {% for d in [1, 2, 3, 7, 14, 30] %}
+        <a href="{{ tbase }}?days={{ d }}&limit={{ limit }}&sort={{ sort }}{{ tq }}"
+           class="period-btn {% if days == d %}active{% endif %}">{{ d }}d</a>
+      {% endfor %}
+    </div>
+    <div class="limit-options">
+      <span class="options-label">Show</span>
+      {% for n in [10, 20, 50] %}
+        <a href="{{ tbase }}?days={{ days }}&limit={{ n }}&sort={{ sort }}{{ tq }}"
+           class="period-btn {% if limit == n %}active{% endif %}">{{ n }}</a>
+      {% endfor %}
+    </div>
+    <div class="sort-options">
+      <a href="{{ tbase }}?days={{ days }}&limit={{ limit }}&sort=score{{ tq }}"
+         class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
+      <a href="{{ tbase }}?days={{ days }}&limit={{ limit }}&sort=time{{ tq }}"
+         class="period-btn {% if sort == 'time' %}active{% endif %}">new</a>
+    </div>
+  </div>
+
+  {# Day navigation #}
+  <div class="day-nav">
+    {% for d in week_days %}
+      <a
+        href="/teams/{{ team.slug }}/day/{{ d.strftime('%Y-%m-%d') }}{% if active_tag %}?tag={{ active_tag }}{% endif %}"
+        class="day-link {% if d.strftime('%Y-%m-%d') == now().strftime('%Y-%m-%d') %}today{% endif %}"
+      >{{ d.strftime('%b %d') }}</a>
+    {% endfor %}
+  </div>
+
+  {# Items #}
+  {% if items %}
+  <table class="items-table">
+    <tbody>
+      {% for item in items %}
+        {{ item_row(item, loop.index, voted, user, show_day=False, team=team, role=role, favorited=favorited) }}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">No items yet. <a href="/teams/{{ team.slug }}/submit">Submit the first one!</a></div>
+  {% endif %}
+
+  {# Admin panel #}
+  {% if role == 'admin' %}
+  <div class="admin-panel">
+    <h3>Team management</h3>
+
+    {# Members table #}
+    <div class="admin-section">
+      <h4>Members</h4>
+      <table class="members-table">
+        <thead><tr><th>User</th><th>Role</th><th>Joined</th><th></th></tr></thead>
+        <tbody>
+        {% for m in members %}
+        <tr>
+          <td><a href="/user/{{ m.user.username }}">{{ m.user.username }}</a></td>
+          <td><span class="team-role role-{{ m.role }}">{{ m.role }}</span></td>
+          <td>{{ m.joined_at.strftime('%Y-%m-%d') }}</td>
+          <td>
+            {% if m.user.id != user.id %}
+            <form action="/api/teams/{{ team.slug }}/remove-member/{{ m.user.id }}" method="post" style="display:inline">
+              <button type="submit" class="btn-sm btn-danger"
+                onclick="return confirm('Remove {{ m.user.username }}?')">Remove</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Add member #}
+    <div class="admin-section">
+      <h4>Add member</h4>
+      <form action="/api/teams/{{ team.slug }}/add-member" method="post" class="inline-form">
+        <input type="email" name="email" placeholder="user@example.com" required/>
+        <select name="role">
+          <option value="viewer">viewer</option>
+          <option value="contributor" selected>contributor</option>
+          <option value="admin">admin</option>
+        </select>
+        <button type="submit">Add</button>
+      </form>
+    </div>
+
+    {# Visibility toggle #}
+    <div class="admin-section">
+      <h4>Team visibility</h4>
+      <p class="settings-hint">
+        Currently: <strong>{% if team.is_public %}public{% else %}private{% endif %}</strong>
+        — {% if team.is_public %}anyone can view this team and its items.{% else %}only members can view this team and its items.{% endif %}
+      </p>
+      <form action="/api/teams/{{ team.slug }}/set-visibility" method="post"
+            onsubmit="return confirm('Switch team to {{ 'private' if team.is_public else 'public' }}?')">
+        <button type="submit" class="btn-secondary">
+          Switch to {% if team.is_public %}private 🔒{% else %}public{% endif %}
+        </button>
+      </form>
+    </div>
+
+    {# Danger zone #}
+    <div class="admin-section danger-zone">
+      <h4>Danger zone</h4>
+      <form action="/api/teams/{{ team.slug }}/delete" method="post"
+            onsubmit="return confirm('Delete team {{ team.name }}? This cannot be undone.')">
+        <label>Type <strong>delete</strong> to confirm:
+          <input type="text" name="confirm" required placeholder="delete"/>
+        </label>
+        <button type="submit" class="btn-danger">Delete team</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

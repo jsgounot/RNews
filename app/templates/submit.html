@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Submit — RNews{% endblock %}
+
+{% block content %}
+<div class="submit-page">
+  <h2>Submit an item</h2>
+
+  {% if error %}
+    <div class="form-error">{{ error }}</div>
+  {% endif %}
+
+  {# ── Hard block: exact URL duplicate ─────────────────────────────────── #}
+  {% if exact_duplicate is defined and exact_duplicate %}
+  <div class="duplicate-error">
+    <strong>This link has already been submitted.</strong>
+    Two posts with the same URL cannot exist.
+    <br/>
+    <a href="/item/{{ exact_duplicate.id }}">View existing post: {{ exact_duplicate.title }}</a>
+  </div>
+  {% endif %}
+
+  {# ── Soft warning: close title matches ───────────────────────────────── #}
+  {% if close_titles is defined and close_titles %}
+  <div class="duplicate-warning">
+    <strong>Warning: very similar titles already exist.</strong>
+    <p class="dup-note">
+      All confirmed duplicates are subject to moderation and removal.
+      You may continue anyway, cancel, or mark your post as a follow-up of an existing one.
+    </p>
+    <ul class="dup-list">
+      {% for item in close_titles %}
+      <li>
+        <label class="dup-followup-label">
+          <input type="radio" name="dup_follow_up" value="{{ item.id }}" class="dup-radio"/>
+          Mark as follow-up of:
+        </label>
+        <a href="/item/{{ item.id }}" target="_blank">{{ item.title }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {# Re-post all prefill data with ?confirmed=1 (and optional follow_up_of) #}
+    <form id="confirm-form" action="/submit" method="post" class="dup-actions">
+      <input type="hidden" name="url"              value="{{ prefill.get('url', '') }}"/>
+      <input type="hidden" name="title"            value="{{ prefill.get('title', '') }}"/>
+      <input type="hidden" name="item_type"        value="{{ prefill.get('item_type', 'paper') }}"/>
+      <input type="hidden" name="journal"          value="{{ prefill.get('journal', '') }}"/>
+      <input type="hidden" name="first_author"     value="{{ prefill.get('first_author', '') }}"/>
+      <input type="hidden" name="last_author"      value="{{ prefill.get('last_author', '') }}"/>
+      <input type="hidden" name="publication_date" value="{{ prefill.get('publication_date', '') }}"/>
+      <input type="hidden" name="tags_input"       value="{{ prefill.get('tags_input', '') }}"/>
+      <button type="submit" id="confirm-btn" class="btn-primary">Continue anyway</button>
+      <a href="/submit" class="btn-secondary">Cancel</a>
+    </form>
+    <script>
+      (function () {
+        var radios = document.querySelectorAll('.dup-radio');
+        var confirmBtn = document.getElementById('confirm-btn');
+        var confirmForm = document.getElementById('confirm-form');
+
+        function updateAction() {
+          var checked = document.querySelector('.dup-radio:checked');
+          var base = '/submit?confirmed=1';
+          if (checked) base += '&follow_up_of=' + checked.value;
+          confirmForm.action = base;
+          confirmBtn.textContent = checked ? 'Continue as follow-up' : 'Continue anyway';
+        }
+
+        radios.forEach(function (r) {
+          r.addEventListener('change', updateAction);
+        });
+
+        // default action (no follow-up selected)
+        confirmForm.action = '/submit?confirmed=1';
+      })();
+    </script>
+  </div>
+  {% endif %}
+
+  {# ── Main submit form (hidden when exact duplicate blocks submission) ── #}
+  {% if not (exact_duplicate is defined and exact_duplicate) %}
+  <form id="submit-form" action="/submit{% if follow_up_of_preset %}?follow_up_of={{ follow_up_of_preset }}{% endif %}" method="post" class="submit-form">
+
+    {# Type selector #}
+    <div class="type-selector">
+      <label class="radio-label">
+        <input type="radio" name="item_type" value="paper"
+               {% if prefill.get('item_type', 'paper') != 'link' %}checked{% endif %}/>
+        Scientific paper
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="item_type" value="link"
+               {% if prefill.get('item_type') == 'link' %}checked{% endif %}/>
+        General link
+      </label>
+    </div>
+
+    {# URL field #}
+    <label>URL
+      <div class="url-wrap">
+        <input
+          type="url"
+          name="url"
+          id="url-input"
+          value="{{ prefill.get('url', '') }}"
+          placeholder="https://…"
+        />
+        <span id="fetch-btn-wrap">
+          <button type="button" id="fetch-meta-btn">Fetch metadata</button>
+        </span>
+      </div>
+      <span id="meta-status" class="meta-status"></span>
+    </label>
+
+    {# Title #}
+    <label>Title <span class="required">*</span>
+      <input type="text" name="title" id="title-input"
+             value="{{ prefill.get('title', '') }}" required maxlength="512"/>
+    </label>
+
+    {# Paper fields (hidden when type=link) #}
+    <div id="paper-fields" class="{% if prefill.get('item_type') == 'link' %}hidden{% endif %}">
+      <label>Journal <span class="required paper-req">*</span>
+        <input type="text" name="journal" id="journal-input"
+               value="{{ prefill.get('journal', '') }}" maxlength="256"/>
+      </label>
+      <label>First author <span class="required paper-req">*</span>
+        <input type="text" name="first_author" id="first-author-input"
+               value="{{ prefill.get('first_author', '') }}" maxlength="256"/>
+      </label>
+      <label>Last author
+        <input type="text" name="last_author" id="last-author-input"
+               value="{{ prefill.get('last_author', '') }}" maxlength="256"/>
+      </label>
+      <label>Publication date
+        <input type="text" name="publication_date" id="pub-date-input"
+               value="{{ prefill.get('publication_date', '') }}"
+               placeholder="YYYY or YYYY-MM or YYYY-MM-DD"/>
+      </label>
+    </div>
+
+    {# Tags #}
+    <label>Tags <span class="required">*</span>
+      <div class="tag-input-wrap">
+        <input
+          type="text"
+          name="tags_input"
+          id="tags-input"
+          value="{{ prefill.get('tags_input', '') }}"
+          placeholder="neuroscience, machine-learning, genomics"
+          autocomplete="off"
+        />
+        <div id="tag-suggestions" class="tag-suggestions hidden"></div>
+      </div>
+      <span class="hint">Comma-separated, max 5. <span id="tag-hint" class="tag-count-hint">0 / 5 tags</span></span>
+    </label>
+
+    {# Follow-up field #}
+    <div class="followup-field">
+      <label>Follow-up of (optional)
+        <div class="followup-wrap">
+          <input
+            type="text"
+            id="followup-search"
+            placeholder="Search for a post by title…"
+            autocomplete="off"
+          />
+          <div id="followup-suggestions" class="tag-suggestions hidden"></div>
+        </div>
+        <span class="hint" id="followup-hint"></span>
+      </label>
+      <input type="hidden" name="follow_up_of_id" id="followup-id-input" value="{{ prefill.get('follow_up_of_id', '') }}"/>
+    </div>
+
+    <button type="submit" class="btn-primary">Submit</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/submit.js"></script>
+<script>
+// Follow-up autocomplete
+(function () {
+  var searchInput  = document.getElementById('followup-search');
+  var suggestBox   = document.getElementById('followup-suggestions');
+  var hiddenInput  = document.getElementById('followup-id-input');
+  var hintSpan     = document.getElementById('followup-hint');
+  var submitForm   = document.getElementById('submit-form');
+
+  if (!searchInput) return;
+
+  var debounce;
+
+  searchInput.addEventListener('input', function () {
+    clearTimeout(debounce);
+    var q = searchInput.value.trim();
+    if (q.length < 3) { suggestBox.classList.add('hidden'); return; }
+    debounce = setTimeout(function () {
+      fetch('/api/items/search?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          suggestBox.innerHTML = '';
+          if (!data.length) { suggestBox.classList.add('hidden'); return; }
+          data.forEach(function (item) {
+            var div = document.createElement('div');
+            div.className = 'tag-suggestion';
+            div.textContent = item.title;
+            div.addEventListener('mousedown', function (e) {
+              e.preventDefault();
+              searchInput.value    = item.title;
+              hiddenInput.value    = item.id;
+              hintSpan.textContent = 'Linked to item #' + item.id;
+              // Also wire into form action if needed
+              if (submitForm) {
+                var action = submitForm.action.split('?')[0];
+                submitForm.action = action + '?follow_up_of=' + item.id;
+              }
+              suggestBox.classList.add('hidden');
+            });
+            suggestBox.appendChild(div);
+          });
+          suggestBox.classList.remove('hidden');
+        });
+    }, 200);
+  });
+
+  searchInput.addEventListener('blur', function () {
+    setTimeout(function () { suggestBox.classList.add('hidden'); }, 150);
+  });
+
+  // Clear follow-up if user clears the search field
+  searchInput.addEventListener('change', function () {
+    if (!searchInput.value.trim()) {
+      hiddenInput.value = '';
+      hintSpan.textContent = '';
+      if (submitForm) {
+        submitForm.action = submitForm.action.split('?')[0];
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

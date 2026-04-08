@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "macros.html" import item_row %}
+
+{% block title %}Search{% if q %}: {{ q }}{% endif %} — RNews{% endblock %}
+
+{% block content %}
+<div class="page-search">
+  <h2>
+    {% if q %}
+      Results for "{{ q }}"
+      {% if tag_mode %}(tag search){% endif %}
+      — {{ items | length }} found
+    {% else %}
+      Search
+    {% endif %}
+  </h2>
+
+  {# Tag chips if tag mode #}
+  {% if tag_mode and tags_found %}
+  <div class="search-tags">
+    {% for tag in tags_found %}
+      <a href="/tag/{{ tag.slug }}" class="tag-chip" style="background:{{ tag_color(tag.name) }}">#{{ tag.name }}</a>
+    {% endfor %}
+    {# Permalink for this tag combo #}
+    <span class="permalink-hint">
+      Permalink:
+      <a href="/search?q={{ q }}&tag_mode=true" class="permalink">/search?q={{ q }}&tag_mode=true</a>
+    </span>
+  </div>
+  {% endif %}
+
+  {% if items %}
+  <table class="items-table">
+    <tbody>
+      {% for item in items %}
+        {{ item_row(item, loop.index, voted, user, show_day=True, favorited=favorited,
+                    source_team=item_source_team.get(item.id)) }}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% elif q %}
+  <div class="empty-state">No results found.</div>
+  {% endif %}
+
+</div>
+{% endblock %}

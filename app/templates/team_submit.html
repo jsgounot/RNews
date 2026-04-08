@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Submit to {{ team.name }} — RNews{% endblock %}
+
+{% block content %}
+<div class="submit-page">
+  <h2>Submit to <a href="/teams/{{ team.slug }}">{{ team.name }}</a></h2>
+  <p class="hint" style="margin-bottom:16px">
+    This item will be <strong>team-only</strong> and won't appear on the main feed.
+  </p>
+
+  {% if error %}
+    <div class="form-error">{{ error }}</div>
+  {% endif %}
+
+  <form id="submit-form" action="/teams/{{ team.slug }}/submit" method="post" class="submit-form">
+
+    <div class="type-selector">
+      <label class="radio-label">
+        <input type="radio" name="item_type" value="paper"
+               {% if prefill.get('item_type', 'paper') != 'link' %}checked{% endif %}/>
+        Scientific paper
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="item_type" value="link"
+               {% if prefill.get('item_type') == 'link' %}checked{% endif %}/>
+        General link
+      </label>
+    </div>
+
+    <label>URL
+      <div class="url-wrap">
+        <input type="url" name="url" id="url-input"
+               value="{{ prefill.get('url', '') }}" placeholder="https://…"/>
+        <span id="fetch-btn-wrap">
+          <button type="button" id="fetch-meta-btn">Fetch metadata</button>
+        </span>
+      </div>
+      <span id="meta-status" class="meta-status"></span>
+    </label>
+
+    <label>Title <span class="required">*</span>
+      <input type="text" name="title" id="title-input"
+             value="{{ prefill.get('title', '') }}" required maxlength="512"/>
+    </label>
+
+    <div id="paper-fields" class="{% if prefill.get('item_type') != 'paper' %}hidden{% endif %}">
+      <label>Journal <span class="required paper-req">*</span>
+        <input type="text" name="journal" id="journal-input"
+               value="{{ prefill.get('journal', '') }}" maxlength="256"/>
+      </label>
+      <label>First author <span class="required paper-req">*</span>
+        <input type="text" name="first_author" id="first-author-input"
+               value="{{ prefill.get('first_author', '') }}" maxlength="256"/>
+      </label>
+      <label>Last author
+        <input type="text" name="last_author" id="last-author-input"
+               value="{{ prefill.get('last_author', '') }}" maxlength="256"/>
+      </label>
+      <label>Publication date
+        <input type="text" name="publication_date" id="pub-date-input"
+               value="{{ prefill.get('publication_date', '') }}"
+               placeholder="YYYY or YYYY-MM or YYYY-MM-DD"/>
+      </label>
+    </div>
+
+    <label>Tags <span class="required">*</span>
+      <div class="tag-input-wrap">
+        <input type="text" name="tags_input" id="tags-input"
+               value="{{ prefill.get('tags_input', '') }}"
+               placeholder="neuroscience, machine-learning"
+               autocomplete="off"/>
+        <div id="tag-suggestions" class="tag-suggestions hidden"></div>
+      </div>
+      <span class="hint">Comma-separated, max 5. <span id="tag-hint" class="tag-count-hint">0 / 5 tags</span></span>
+    </label>
+
+    <button type="submit" class="btn-primary">Submit to {{ team.name }}</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/submit.js"></script>
+{% endblock %}

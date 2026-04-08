@@ -1,0 +1,95 @@
+{# Shared macros for rendering item rows #}
+
+{% macro item_row(item, rank, voted, user, show_day=False, team=None, role=None, favorited=None, source_team=None) %}
+<tr class="item-row" id="item-{{ item.id }}">
+  {# Col 1: upvote #}
+  <td class="col-score">
+    <button
+      class="vote-btn {% if item.id in voted %}voted{% endif %}"
+      data-id="{{ item.id }}"
+      {% if not user %}title="Login to vote"{% endif %}
+    >▲</button>
+    <span class="score-val" id="score-{{ item.id }}">{{ item.score }}</span>
+  </td>
+
+  {# Col 2: star (favorite) #}
+  <td class="col-star">
+    <button
+      class="star-btn {% if favorited is not none and item.id in favorited %}starred{% endif %}"
+      data-id="{{ item.id }}"
+      {% if not user %}title="Login to save favorites"{% endif %}
+    >★</button>
+  </td>
+
+  {# Col 3: comments #}
+  <td class="col-comments">
+    <a href="/item/{{ item.id }}#comments" class="comments-link" title="Comments">
+      💬 {{ item.comment_count }}
+    </a>
+  </td>
+
+  {# Col 4: title + domain #}
+  <td class="col-title">
+    {% if item.url %}
+      <a href="{{ item.url }}" class="item-title" target="_blank" rel="noopener">{{ item.title }}</a>
+      <span class="item-domain">({{ item.domain }})</span>
+    {% else %}
+      <a href="/item/{{ item.id }}" class="item-title">{{ item.title }}</a>
+    {% endif %}
+    {% if show_day %}
+      <span class="item-date"><a href="/day/{{ item.created_at.strftime('%Y-%m-%d') }}">{{ item.created_at.strftime('%b %d') }}</a></span>
+    {% endif %}
+    {% if team %}
+      {% for ti in item.team_items %}
+        {% if ti.team_id == team.id and ti.source == 'shared' %}
+          <span class="shared-badge" title="Shared from main feed">↗ shared</span>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+    {% if source_team %}
+      <a href="/teams/{{ source_team.slug }}" class="source-team-badge">
+        {% if not source_team.is_public %}<span class="team-private-icon" title="Private team">🔒</span>{% endif %}
+        {{ source_team.name }}
+      </a>
+    {% endif %}
+  </td>
+
+  {# Col 5: paper info #}
+  <td class="col-paper">
+    {% if item.item_type == 'paper' %}
+      <span class="paper-info">
+        {% if item.first_author %}<span class="author">{{ item.first_author }}</span>{% endif %}
+        {% if item.last_author and item.last_author != item.first_author %}
+          <span class="author-sep">&hellip;</span>
+          <span class="author">{{ item.last_author }}</span>
+        {% endif %}
+        {% if item.journal %}<span class="journal">{{ item.journal }}</span>{% endif %}
+        {% if item.publication_date %}<span class="pub-date">{{ item.publication_date }}</span>{% endif %}
+      </span>
+    {% endif %}
+  </td>
+
+  {# Col 6: tags #}
+  <td class="col-tags">
+    {% for tag in item.tags %}
+      <a
+        href="{% if team %}/teams/{{ team.slug }}?tag={{ tag.slug }}{% else %}/tag/{{ tag.slug }}{% endif %}"
+        class="tag-chip"
+        style="background:{{ tag_color(tag.name) }}"
+      >#{{ tag.name }}</a>
+    {% endfor %}
+  </td>
+
+  {# Col 7 (team admin only): remove #}
+  {% if team and role == 'admin' %}
+  <td class="col-admin">
+    <button
+      class="remove-team-item-btn btn-sm btn-danger"
+      data-team="{{ team.slug }}"
+      data-item="{{ item.id }}"
+      title="Remove from team"
+    >✕</button>
+  </td>
+  {% endif %}
+</tr>
+{% endmacro %}

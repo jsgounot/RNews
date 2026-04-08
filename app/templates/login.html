@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Login — RNews{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <h2>Login</h2>
+  {% if error %}
+    <div class="form-error">{{ error }}</div>
+  {% endif %}
+  <form action="/login" method="post" class="auth-form">
+    <label>Email
+      <input type="email" name="email" required autofocus/>
+    </label>
+    <label>Password
+      <input type="password" name="password" required/>
+    </label>
+    <button type="submit">Login</button>
+  </form>
+  <p>Don't have an account? <a href="/register">Register</a></p>
+  <p><a href="/forgot-password" class="forgot-link">Forgot your password?</a></p>
+</div>
+{% endblock %}

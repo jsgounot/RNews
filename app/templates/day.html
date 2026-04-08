@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "macros.html" import item_row %}
+
+{% block title %}{{ date.strftime('%B %d, %Y') }} — RNews{% endblock %}
+
+{% block content %}
+<div class="page-day">
+
+  <div class="day-header">
+    <h2>
+      {% if tag %}
+        <a href="/tag/{{ tag.slug }}" class="tag-chip-lg" style="background:{{ tag_color(tag.name) }}">#{{ tag.name }}</a>
+        —
+      {% endif %}
+      {{ date.strftime('%A, %B %d, %Y') }}
+      <span class="item-count">({{ total }} items)</span>
+    </h2>
+
+    <div class="sort-options">
+      <a href="/day/{{ date_str }}?sort=score{% if tag_slug %}&tag_slug={{ tag_slug }}{% endif %}&page={{ page }}"
+         class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
+      <a href="/day/{{ date_str }}?sort=time{% if tag_slug %}&tag_slug={{ tag_slug }}{% endif %}&page={{ page }}"
+         class="period-btn {% if sort == 'time' %}active{% endif %}">new</a>
+    </div>
+  </div>
+
+  {% if items %}
+  <table class="items-table">
+    <tbody>
+      {% for item in items %}
+        {{ item_row(item, loop.index + (page-1)*50, voted, user, favorited=favorited) }}
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# Pagination #}
+  {% if total_pages > 1 %}
+  <div class="pagination">
+    {% if page > 1 %}
+      <a href="/day/{{ date_str }}?sort={{ sort }}&page={{ page - 1 }}{% if tag_slug %}&tag_slug={{ tag_slug }}{% endif %}">&laquo; prev</a>
+    {% endif %}
+    <span>Page {{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+      <a href="/day/{{ date_str }}?sort={{ sort }}&page={{ page + 1 }}{% if tag_slug %}&tag_slug={{ tag_slug }}{% endif %}">next &raquo;</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">No items submitted on this day.</div>
+  {% endif %}
+
+</div>
+{% endblock %}

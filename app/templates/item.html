@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{# ── Recursive comment macro — must be defined before {% block content %} ── #}
+{% macro render_comment(node, user, voted_comments, item_id) %}
+{% set c = node.comment %}
+<div class="comment" id="comment-{{ c.id }}">
+  <div class="comment-meta">
+    <button
+      class="vote-btn-sm {% if c.id in voted_comments %}voted{% endif %}"
+      data-comment-id="{{ c.id }}"
+      {% if not user %}title="Login to vote"{% endif %}
+    >▲</button>
+    <span class="comment-score" id="cscore-{{ c.id }}">{{ c.score }}</span>
+    <strong class="comment-author">{{ c.author.username }}</strong>
+    <span class="comment-date">{{ time_ago(c.created_at) }}</span>
+    {% if user %}
+    <button class="reply-toggle" data-comment="{{ c.id }}">reply</button>
+    {% endif %}
+  </div>
+
+  <div class="comment-body">{{ c.content }}</div>
+
+  {% if user %}
+  <form
+    class="reply-form hidden"
+    id="reply-form-{{ c.id }}"
+    action="/api/comment/{{ item_id }}"
+    method="post"
+  >
+    <textarea name="content" placeholder="Write a reply…" rows="3" required></textarea>
+    <input type="hidden" name="parent_id" value="{{ c.id }}"/>
+    <div class="reply-actions">
+      <button type="submit">Post reply</button>
+      <button type="button" class="reply-cancel" data-comment="{{ c.id }}">cancel</button>
+    </div>
+  </form>
+  {% endif %}
+
+  {% if node.children %}
+  <div class="comment-children">
+    {% for child in node.children %}
+      {{ render_comment(child, user, voted_comments, item_id) }}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% block title %}{{ item.title }} — RNews{% endblock %}
+
+{% block content %}
+<div class="page-item">
+
+  {# Item header #}
+  <div class="item-header">
+    <div class="item-header-vote">
+      <button
+        class="vote-btn-lg {% if item_voted %}voted{% endif %}"
+        data-id="{{ item.id }}"
+        {% if not user %}title="Login to vote"{% endif %}
+      >▲</button>
+      <span class="score-val-lg" id="score-{{ item.id }}">{{ item.score }}</span>
+    </div>
+
+    <div class="item-header-info">
+      <h1 class="item-title-lg">
+        {% if item.url %}
+          <a href="{{ item.url }}" target="_blank" rel="noopener">{{ item.title }}</a>
+          <span class="item-domain">({{ item.domain }})</span>
+        {% else %}
+          {{ item.title }}
+        {% endif %}
+      </h1>
+
+      {% if item.item_type == 'paper' %}
+      <div class="paper-details">
+        {% if item.first_author or item.last_author %}
+        <span class="detail-label">Authors:</span>
+        <span>
+          {{ item.first_author or '' }}
+          {% if item.last_author and item.last_author != item.first_author %}
+            … {{ item.last_author }}
+          {% endif %}
+        </span>
+        {% endif %}
+        {% if item.journal %}
+        <span class="detail-label">Journal:</span>
+        <span>{{ item.journal }}</span>
+        {% endif %}
+        {% if item.publication_date %}
+        <span class="detail-label">Published:</span>
+        <span>{{ item.publication_date }}</span>
+        {% endif %}
+        {% if item.doi %}
+        <span class="detail-label">DOI:</span>
+        <a href="https://doi.org/{{ item.doi }}" target="_blank" rel="noopener">{{ item.doi }}</a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="item-meta">
+        <span>submitted by <strong>{{ item.submitter.username }}</strong></span>
+        <span>{{ time_ago(item.created_at) }}</span>
+        <span>{{ item.comment_count }} comment{% if item.comment_count != 1 %}s{% endif %}</span>
+        {% if item.parent_item %}
+        <span class="followup-meta">follow-up of: <a href="/item/{{ item.parent_item.id }}">{{ item.parent_item.title }}</a></span>
+        {% endif %}
+      </div>
+      {% if item.last_edited_at and item.editor %}
+      <div class="item-edited-meta">
+        last edited by <strong>{{ item.editor.username }}</strong>
+        on {{ item.last_edited_at.strftime('%Y-%m-%d %H:%M') }} UTC
+      </div>
+      {% endif %}
+
+      {% if item.follow_ups %}
+      <div class="followups-list">
+        <strong>Follow-ups:</strong>
+        <ul>
+          {% for fu in item.follow_ups %}
+          <li><a href="/item/{{ fu.id }}">{{ fu.title }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <div class="item-tags">
+        {% for tag in item.tags %}
+          <a href="/tag/{{ tag.slug }}" class="tag-chip" style="background:{{ tag_color(tag.name) }}">#{{ tag.name }}</a>
+        {% endfor %}
+      </div>
+
+      {# Share to team — hidden for items from private teams #}
+      {% if user and can_share and user.team_memberships %}
+      {% set contributor_teams = user.team_memberships | selectattr('role', 'in', ['admin', 'contributor']) | list %}
+      {% if contributor_teams %}
+      <div class="share-to-team">
+        <button class="btn-share-toggle" id="share-toggle">↗ Share to team</button>
+        <div class="share-panel hidden" id="share-panel">
+          <select id="share-team-select">
+            {% for m in contributor_teams %}
+            <option value="{{ m.team.slug }}">{{ m.team.name }}</option>
+            {% endfor %}
+          </select>
+          <button id="share-submit-btn" data-item="{{ item.id }}">Share</button>
+          <span id="share-status" class="share-status"></span>
+        </div>
+      </div>
+      {% endif %}
+      {% endif %}
+
+      {# Edit / delete panel (superadmin or submitter) #}
+      {% if can_edit %}
+      <div class="item-admin-bar">
+        <button class="btn-edit-toggle" id="edit-toggle">✎ Edit</button>
+        <form action="/api/item/{{ item.id }}/delete" method="post" style="display:inline"
+              onsubmit="return confirm('Delete this post permanently?')">
+          <button type="submit" class="btn-sm btn-danger">✕ Delete</button>
+        </form>
+      </div>
+
+      <div class="item-edit-panel hidden" id="edit-panel">
+        {% set err = request.query_params.get('edit_error', '') %}
+        {% set ok  = request.query_params.get('edit_success', '') %}
+        {% if err %}<div class="form-error">{{ err }}</div>{% endif %}
+        {% if ok  %}<div class="form-success">Post updated successfully.</div>{% endif %}
+
+        <form action="/api/item/{{ item.id }}/edit" method="post" class="edit-form">
+          <label>Title <span class="required">*</span>
+            <input type="text" name="title" value="{{ item.title }}" required maxlength="512"/>
+          </label>
+
+          {% if item.item_type == 'paper' %}
+          <label>Journal
+            <input type="text" name="journal" value="{{ item.journal or '' }}" maxlength="256"/>
+          </label>
+          <label>First author
+            <input type="text" name="first_author" value="{{ item.first_author or '' }}" maxlength="256"/>
+          </label>
+          <label>Last author
+            <input type="text" name="last_author" value="{{ item.last_author or '' }}" maxlength="256"/>
+          </label>
+          <label>Publication date
+            <input type="text" name="publication_date" value="{{ item.publication_date or '' }}"
+                   placeholder="YYYY or YYYY-MM or YYYY-MM-DD"/>
+          </label>
+          {% endif %}
+
+          <label>Tags <span class="required">*</span>
+            <input type="text" name="tags_input"
+                   value="{{ item.tags | map(attribute='name') | join(', ') }}"
+                   placeholder="tag1, tag2" maxlength="256"/>
+            <span class="hint">Comma-separated, max 5.</span>
+          </label>
+
+          <div class="edit-form-actions">
+            <button type="submit" class="btn-primary">Save changes</button>
+            <button type="button" id="edit-cancel" class="btn-secondary">Cancel</button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Comment section #}
+  <div class="comment-section" id="comments">
+    <h3>Comments</h3>
+
+    {% if user %}
+    <form class="comment-form" action="/api/comment/{{ item.id }}" method="post">
+      <textarea name="content" placeholder="Add a comment…" rows="4" required></textarea>
+      <input type="hidden" name="parent_id" value=""/>
+      <button type="submit">Post comment</button>
+    </form>
+    {% else %}
+    <p class="login-prompt"><a href="/login">Login</a> to comment.</p>
+    {% endif %}
+
+    {% if tree %}
+    <div class="comment-tree">
+      {% for node in tree %}
+        {{ render_comment(node, user, voted_comments, item.id) }}
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-comments">No comments yet. Be the first!</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if can_edit %}
+<script>
+(function () {
+  var toggle = document.getElementById('edit-toggle');
+  var panel  = document.getElementById('edit-panel');
+  var cancel = document.getElementById('edit-cancel');
+  if (!toggle || !panel) return;
+
+  // Auto-open if there was an edit error or success via query param
+  var qs = new URLSearchParams(window.location.search);
+  if (qs.get('edit_error') || qs.get('edit_success')) {
+    panel.classList.remove('hidden');
+    toggle.textContent = '✎ Close editor';
+  }
+
+  toggle.addEventListener('click', function () {
+    var hidden = panel.classList.toggle('hidden');
+    toggle.textContent = hidden ? '✎ Edit' : '✎ Close editor';
+  });
+
+  if (cancel) {
+    cancel.addEventListener('click', function () {
+      panel.classList.add('hidden');
+      toggle.textContent = '✎ Edit';
+    });
+  }
+})();
+</script>
+{% endif %}
+{% endblock %}

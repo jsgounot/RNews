@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% from "macros.html" import item_row %}
+
+{% block title %}{{ page_title }} — RNews{% endblock %}
+
+{# Build a base URL that preserves the current tag context #}
+{% set base = '/tag/' ~ tag.slug if tag else '/' %}
+
+{% block content %}
+<div class="page-index">
+
+  {# Period / limit / sort options bar #}
+  <div class="options-bar">
+    <div class="period-options">
+      <span class="options-label">Top</span>
+      {% for d in [1, 2, 3, 7, 14, 30] %}
+        <a href="{{ base }}?days={{ d }}&limit={{ limit }}&sort={{ sort }}"
+           class="period-btn {% if days == d %}active{% endif %}">{{ d }}d</a>
+      {% endfor %}
+    </div>
+    <div class="limit-options">
+      <span class="options-label">Show</span>
+      {% for n in [10, 20, 50] %}
+        <a href="{{ base }}?days={{ days }}&limit={{ n }}&sort={{ sort }}"
+           class="period-btn {% if limit == n %}active{% endif %}">{{ n }}</a>
+      {% endfor %}
+    </div>
+    <div class="sort-options">
+      <a href="{{ base }}?days={{ days }}&limit={{ limit }}&sort=score"
+         class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
+      <a href="{{ base }}?days={{ days }}&limit={{ limit }}&sort=time"
+         class="period-btn {% if sort == 'time' %}active{% endif %}">new</a>
+    </div>
+  </div>
+
+  {# Day navigation #}
+  <div class="day-nav">
+    {% for d in week_days %}
+      <a href="/day/{{ d.strftime('%Y-%m-%d') }}{% if tag %}?tag_slug={{ tag.slug }}{% endif %}"
+         class="day-link {% if d.strftime('%Y-%m-%d') == now().strftime('%Y-%m-%d') %}today{% endif %}">
+        {{ d.strftime('%b %d') }}
+      </a>
+    {% endfor %}
+  </div>
+
+  {# Tag heading + save button #}
+  {% if tag %}
+  <div class="tag-heading">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <h2>
+        <span class="tag-chip-lg" style="background:{{ tag_color(tag.name) }}">#{{ tag.name }}</span>
+        &nbsp;— {{ 'newest' if sort == 'time' else 'top' }} {{ limit }}, last {{ days }}d
+      </h2>
+      {% if user %}
+      <button
+        class="save-tag-btn {% if tag_saved %}saved{% endif %}"
+        data-slug="{{ tag.slug }}"
+      >
+        <span class="save-icon">★</span>
+        <span class="save-label">{% if tag_saved %}Saved{% else %}Save tag{% endif %}</span>
+      </button>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if items %}
+  <table class="items-table">
+    <tbody>
+      {% for item in items %}
+        {{ item_row(item, loop.index, voted, user, favorited=favorited) }}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">No items found for this period.</div>
+  {% endif %}
+
+</div>
+{% endblock %}

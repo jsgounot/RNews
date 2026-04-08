@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}RNews{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+
+<header id="site-header">
+  <div class="header-inner">
+    <a class="site-logo" href="/">RNews</a>
+
+    <form id="search-form" action="/search" method="get" autocomplete="off">
+      <div class="search-wrap">
+        <input
+          type="text"
+          name="q"
+          id="search-input"
+          placeholder="Search…"
+          value="{{ request.query_params.get('q', '') }}"
+          autocomplete="off"
+        />
+        <label class="tag-toggle">
+          <input
+            type="checkbox"
+            name="tag_mode"
+            id="tag-mode-cb"
+            value="true"
+            {% if request.query_params.get('tag_mode') == 'true' %}checked{% endif %}
+          />
+          <span>by tag</span>
+        </label>
+        <button type="submit">Search</button>
+      </div>
+    </form>
+
+    <nav class="site-nav">
+      {% if user %}
+        <a href="/user/{{ user.username }}" class="nav-user">{{ user.username }}</a>
+        <a href="/settings" class="btn-link" title="Settings">⚙</a>
+        <a href="/submit" class="btn-submit">+ Submit</a>
+        <form action="/logout" method="post" style="display:inline">
+          <button type="submit" class="btn-link">logout</button>
+        </form>
+      {% else %}
+        <a href="/login">login</a>
+        <a href="/register">register</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  <span>RNews — powered by FastAPI &amp; SQLite — <a href="/about">about</a></span>
+</footer>
+
+<script src="/static/js/main.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

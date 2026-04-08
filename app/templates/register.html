@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Register — RNews{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <h2>Create account</h2>
+  {% if error %}
+    <div class="form-error">{{ error }}</div>
+  {% endif %}
+  <form action="/register" method="post" class="auth-form">
+    <label>Email
+      <input type="email" name="email" required autofocus/>
+    </label>
+    <label>Username
+      <input type="text" name="username" required minlength="3" maxlength="32"
+             pattern="[a-zA-Z0-9_-]+"
+             title="Letters, numbers, underscores and dashes only"/>
+    </label>
+    <label>Password
+      <input type="password" name="password" required minlength="6"/>
+    </label>
+    <button type="submit">Create account</button>
+  </form>
+  <p>Already have an account? <a href="/login">Login</a></p>
+</div>
+{% endblock %}

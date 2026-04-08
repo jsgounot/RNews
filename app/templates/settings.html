@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — RNews{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+  <h2>Settings</h2>
+
+  {# Tabs #}
+  <div class="settings-tabs">
+    <a href="/settings?tab=profile" class="tab-link {% if tab == 'profile' %}active{% endif %}">Profile</a>
+    <a href="/settings?tab=teams" class="tab-link {% if tab == 'teams' %}active{% endif %}">Teams</a>
+  </div>
+
+  {% if error %}
+  <div class="form-error">{{ error }}</div>
+  {% endif %}
+  {% if success %}
+  <div class="form-success">{{ success }}</div>
+  {% endif %}
+
+  {# ── Profile tab ── #}
+  {% if tab == 'profile' %}
+  <div class="settings-section">
+    <h3>Account info</h3>
+    <p><strong>Username:</strong> {{ user.username }}</p>
+    <p><strong>Email:</strong> {{ user.email }}</p>
+    <p><strong>Member since:</strong> {{ user.created_at.strftime('%B %d, %Y') }}</p>
+  </div>
+
+  <div class="settings-section">
+    <h3>Change email</h3>
+    <form action="/settings/email" method="post" class="settings-form">
+      <label>New email address
+        <input type="email" name="new_email" required placeholder="{{ user.email }}"/>
+      </label>
+      <label>Confirm with password
+        <input type="password" name="password" required/>
+      </label>
+      <button type="submit">Update email</button>
+    </form>
+  </div>
+
+  <div class="settings-section">
+    <h3>Change password</h3>
+    <form action="/settings/password" method="post" class="settings-form">
+      <label>Current password
+        <input type="password" name="current_password" required/>
+      </label>
+      <label>New password
+        <input type="password" name="new_password" required minlength="6"/>
+      </label>
+      <label>Confirm new password
+        <input type="password" name="confirm_password" required/>
+      </label>
+      <button type="submit">Update password</button>
+    </form>
+  </div>
+
+  {# ── Teams tab ── #}
+  {% elif tab == 'teams' %}
+  <div class="settings-section">
+    <h3>Create a new team</h3>
+    <form action="/teams/create" method="post" class="settings-form">
+      <label>Team name <span class="required">*</span>
+        <input type="text" name="name" required maxlength="128" placeholder="My Lab"/>
+      </label>
+      <label>Description
+        <textarea name="description" rows="2" placeholder="Optional description"></textarea>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_public" value="true" checked/>
+        Public (anyone can view)
+      </label>
+      <button type="submit">Create team</button>
+    </form>
+  </div>
+
+  <div class="settings-section">
+    <h3>Your teams</h3>
+    {% if teams %}
+    <div class="teams-list">
+      {% for team in teams %}
+      {% set role = team_roles[team.id] %}
+      <div class="team-card">
+        <div class="team-card-header">
+          <a href="/teams/{{ team.slug }}" class="team-name">{{ team.name }}</a>
+          <span class="team-role role-{{ role }}">{{ role }}</span>
+          <span class="team-visibility-badge {% if team.is_public %}badge-public{% else %}badge-private{% endif %}">
+            {% if team.is_public %}public{% else %}🔒 private{% endif %}
+          </span>
+        </div>
+        {% if team.description %}
+        <p class="team-desc">{{ team.description }}</p>
+        {% endif %}
+        <div class="team-card-actions">
+          <a href="/teams/{{ team.slug }}" class="btn-sm">View feed</a>
+          {% if role in ('admin', 'contributor') %}
+          <a href="/teams/{{ team.slug }}/submit" class="btn-sm">+ Submit</a>
+          {% endif %}
+          <form action="/api/teams/{{ team.slug }}/remove-member/{{ user.id }}" method="post" style="display:inline">
+            <button type="submit" class="btn-sm btn-danger"
+              onclick="return confirm('Leave team {{ team.name }}?')">Leave</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-state" style="padding:16px 0">You are not a member of any team yet.</p>
+    {% endif %}
+  </div>
+
+  {% endif %}
+
+</div>
+{% endblock %}
