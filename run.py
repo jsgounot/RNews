@@ -20,7 +20,8 @@ import os
 def main():
     parser = argparse.ArgumentParser(description="Run the RNews server")
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)))
-    parser.add_argument("--host", default="0.0.0.0" if os.environ.get("RENDER") else "127.0.0.1")
+    _deployed = os.environ.get("RENDER") or os.environ.get("RAILWAY_ENVIRONMENT")
+    parser.add_argument("--host", default="0.0.0.0" if _deployed else "127.0.0.1")
     parser.add_argument("--seed", action="store_true", help="Seed demo data before starting")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload (dev mode)")
     args = parser.parse_args()

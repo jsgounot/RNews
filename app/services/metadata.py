@@ -12,6 +12,7 @@ The service optionally integrates with a Zotero Translation Server
 (https://github.com/zotero/translation-server) if running on localhost:1969.
 """
 
+import os
 import re
 import httpx
 from urllib.parse import urlparse
@@ -22,7 +23,7 @@ from typing import Optional
 CROSSREF_URL = "https://api.crossref.org/works/{doi}"
 ARXIV_API = "https://export.arxiv.org/api/query?id_list={arxiv_id}"
 PUBMED_SUMMARY = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
-ZOTERO_SERVER = "http://127.0.0.1:1969/web"
+ZOTERO_SERVER = os.environ.get("ZOTERO_SERVER_URL", "http://127.0.0.1:1969/web")
 
 HEADERS = {
     "User-Agent": (
