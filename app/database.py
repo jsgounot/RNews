@@ -3,8 +3,11 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
-# LOCAL default is SQLite; on Render set DATABASE_URL to the Postgres connection string.
+# LOCAL default is SQLite; on Railway/Render set DATABASE_URL to the Postgres connection string.
+# Railway provides postgres:// but SQLAlchemy 2.0 requires postgresql://.
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./rnews.db")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # SQLite needs check_same_thread=False; Postgres does not accept that kwarg.
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
