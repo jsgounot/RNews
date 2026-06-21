@@ -51,9 +51,14 @@ if (fetchBtn) {
       if (data.publication_date && pubDateInput) pubDateInput.value     = data.publication_date;
 
       const filled = [data.title, data.journal, data.first_author].filter(Boolean).length;
-      metaStatus.textContent = filled > 0
-        ? `✓ Filled ${filled} field(s) automatically`
-        : "No metadata found — please fill manually.";
+      if (filled > 0) {
+        metaStatus.textContent = `✓ Filled ${filled} field(s) automatically`;
+      } else {
+        const hasDoi = /10\.\d{4,}\/\S+/.test(url) || /doi\.org/i.test(url);
+        metaStatus.textContent = hasDoi
+          ? "No metadata found — please fill manually."
+          : "No metadata found — please fill manually. Try a DOI (e.g. 10.1038/…) or a doi.org link instead.";
+      }
     } catch (err) {
       metaStatus.textContent = "Error fetching metadata.";
       console.error(err);
