@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}RNews{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/style.css"/>
+  <link rel="stylesheet" href="/static/css/style.css?v={{ static_v }}"/>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
 </head>
 <body>
@@ -61,7 +61,7 @@
   <span>RNews — powered by FastAPI &amp; SQLite — <a href="/about">about</a></span>
 </footer>
 
-<script src="/static/js/main.js"></script>
+<script src="/static/js/main.js?v={{ static_v }}"></script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

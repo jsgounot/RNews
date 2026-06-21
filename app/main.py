@@ -90,6 +90,16 @@ templates.env.globals["tag_color"] = tag_color
 templates.env.globals["time_ago"] = time_ago
 templates.env.globals["now"] = lambda: datetime.now(timezone.utc)
 
+# Cache-busting token for static assets.
+# On Railway: uses the git commit SHA (changes only on deploy).
+# Locally: falls back to an hourly timestamp.
+_STATIC_VERSION = (
+    os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")[:8]
+    or os.environ.get("RENDER_GIT_COMMIT", "")[:8]
+    or datetime.now().strftime("%Y%m%d%H")
+)
+templates.env.globals["static_v"] = _STATIC_VERSION
+
 
 # ── Helper functions ──────────────────────────────────────────────────────────
 
