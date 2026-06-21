@@ -67,6 +67,9 @@ class Item(Base):
     publication_date = Column(String(32), nullable=True)
     doi = Column(String(256), nullable=True)
 
+    # Resolved endpoint URL for display (populated at submit time for DOI URLs)
+    display_url = Column(Text, nullable=True)
+
     # If True, this item was submitted directly to a team and won't appear on main feed
     is_team_only = Column(Boolean, default=False, nullable=False)
 
@@ -110,11 +113,12 @@ class Item(Base):
 
     @property
     def domain(self):
-        if not self.url:
+        source = self.display_url or self.url
+        if not source:
             return None
         from urllib.parse import urlparse
         try:
-            parsed = urlparse(self.url)
+            parsed = urlparse(source)
             return parsed.netloc.replace("www.", "")
         except Exception:
             return None

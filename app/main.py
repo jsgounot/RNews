@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from urllib.parse import urlparse
 
+import httpx
+
 from fastapi import (
     FastAPI, Request, Form, Depends, HTTPException, Query
 )
@@ -128,6 +130,20 @@ def _edit_distance(a: str, b: str) -> int:
             curr.append(min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + (ca != cb)))
         prev = curr
     return prev[-1]
+
+
+async def _resolve_display_url(url: str) -> Optional[str]:
+    """If url is a DOI link, follow redirects and return the final endpoint URL for display.
+    Returns None on failure or if the URL is not a DOI."""
+    if not url or "doi.org/" not in url.lower():
+        return None
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=5.0) as client:
+            resp = await client.head(url, headers={"User-Agent": "Mozilla/5.0 (RNews)"})
+            resolved = str(resp.url)
+            return resolved if resolved != url else None
+    except Exception:
+        return None
 
 
 def find_exact_url(db: Session, url: str, exclude_team_only: bool = False) -> Optional[Item]:
@@ -701,6 +717,8 @@ async def submit_item(
         if not parent:
             follow_up_of_id = None
 
+    display_url = await _resolve_display_url(url)
+
     item = Item(
         url=url or None,
         title=title,
@@ -711,6 +729,7 @@ async def submit_item(
         publication_date=publication_date.strip() or None,
         submitter_id=user.id,
         follow_up_of=follow_up_of_id,
+        display_url=display_url,
     )
 
     for name in tag_names:
@@ -1421,6 +1440,8 @@ async def team_submit_item(
             if already_in_team:
                 return RedirectResponse(f"/item/{existing_item.id}?duplicate=1", status_code=302)
 
+    display_url = await _resolve_display_url(url)
+
     item = Item(
         url=url or None,
         title=title,
@@ -1431,6 +1452,7 @@ async def team_submit_item(
         publication_date=publication_date.strip() or None,
         submitter_id=user.id,
         is_team_only=True,
+        display_url=display_url,
     )
     for name in tag_names:
         tag_obj = get_or_create_tag(db, name)

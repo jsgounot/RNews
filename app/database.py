@@ -54,6 +54,7 @@ def _migrate():
             "ALTER TABLE users ADD COLUMN auto_upvote_on_favorite INTEGER NOT NULL DEFAULT 1",
             "ALTER TABLE users ADD COLUMN auto_upvote_on_favorite BOOLEAN NOT NULL DEFAULT TRUE",
         ),
+        "ALTER TABLE items ADD COLUMN display_url TEXT",
     ]
 
     with engine.connect() as conn:
