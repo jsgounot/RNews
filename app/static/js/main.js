@@ -172,12 +172,20 @@ document.addEventListener("click", async (e) => {
     });
     // If auto-vote fired, reflect the new score and mark vote buttons as voted
     if (data.auto_voted) {
-      document.querySelectorAll(`.vote-btn[data-id="${itemId}"], .vote-btn-lg[data-id="${itemId}"]`).forEach((b) => {
-        b.classList.add("voted");
-      });
-      document.querySelectorAll(`#score-${itemId}, .score-val[id="score-${itemId}"]`).forEach((el) => {
+      // Update score displays everywhere on the page
+      document.querySelectorAll(`#score-${itemId}`).forEach((el) => {
         el.textContent = data.score;
       });
+      // Update vote button in the same row (most reliable — avoids attribute selector issues)
+      const row = btn.closest("tr");
+      if (row) {
+        row.querySelectorAll(".vote-btn, .vote-btn-lg").forEach((b) => b.classList.add("voted"));
+      } else {
+        // Fallback for pages where the star isn't in a table row
+        document.querySelectorAll(`.vote-btn[data-id="${itemId}"], .vote-btn-lg[data-id="${itemId}"]`).forEach((b) => {
+          b.classList.add("voted");
+        });
+      }
     }
   } catch (err) {
     console.error("Favorite toggle failed:", err);
