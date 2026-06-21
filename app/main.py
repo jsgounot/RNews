@@ -822,7 +822,7 @@ def add_comment(
     item_id: int,
     request: Request,
     content: str = Form(...),
-    parent_id: Optional[int] = Form(None),
+    parent_id: str = Form(""),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ):
@@ -836,10 +836,12 @@ def add_comment(
     if not content:
         return RedirectResponse(f"/item/{item_id}", status_code=302)
 
+    parsed_parent_id = int(parent_id) if parent_id.strip() else None
+
     comment = Comment(
         item_id=item_id,
         user_id=user.id,
-        parent_id=parent_id if parent_id else None,
+        parent_id=parsed_parent_id,
         content=content,
     )
     db.add(comment)
@@ -1148,6 +1150,22 @@ def change_email(
     user.email = new_email
     db.commit()
     return _respond(success="Email updated successfully.")
+
+
+# ── Settings: preferences ────────────────────────────────────────────────────
+
+@app.post("/settings/preferences")
+async def save_preferences(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    form_data = await request.form()
+    user.auto_upvote_on_favorite = form_data.get("auto_upvote_on_favorite", "") in ("true", "on", "1", "yes")
+    db.commit()
+    return RedirectResponse("/settings?tab=profile&success=Preferences+saved", status_code=302)
 
 
 # ── Team creation ─────────────────────────────────────────────────────────────
@@ -1679,11 +1697,24 @@ def toggle_favorite(
     if existing:
         db.delete(existing)
         db.commit()
-        return JSONResponse({"favorited": False})
-    else:
-        db.add(FavoriteItem(user_id=user.id, item_id=item_id))
-        db.commit()
-        return JSONResponse({"favorited": True})
+        db.refresh(item)
+        return JSONResponse({"favorited": False, "score": item.score, "auto_voted": False})
+
+    db.add(FavoriteItem(user_id=user.id, item_id=item_id))
+
+    # Auto-upvote if enabled and not already voted
+    auto_voted = False
+    if user.auto_upvote_on_favorite:
+        already_voted = db.query(Vote).filter(
+            Vote.user_id == user.id, Vote.item_id == item_id
+        ).first()
+        if not already_voted:
+            db.add(Vote(user_id=user.id, item_id=item_id))
+            auto_voted = True
+
+    db.commit()
+    db.refresh(item)
+    return JSONResponse({"favorited": True, "score": item.score, "auto_voted": auto_voted})
 
 
 # ── Forgot password ───────────────────────────────────────────────────────────

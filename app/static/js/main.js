@@ -170,6 +170,15 @@ document.addEventListener("click", async (e) => {
       b.classList.toggle("starred", data.favorited);
       b.title = data.favorited ? "Remove from favorites" : "Add to favorites";
     });
+    // If auto-vote fired, reflect the new score and mark vote buttons as voted
+    if (data.auto_voted) {
+      document.querySelectorAll(`.vote-btn[data-id="${itemId}"], .vote-btn-lg[data-id="${itemId}"]`).forEach((b) => {
+        b.classList.add("voted");
+      });
+      document.querySelectorAll(`#score-${itemId}, .score-val[id="score-${itemId}"]`).forEach((el) => {
+        el.textContent = data.score;
+      });
+    }
   } catch (err) {
     console.error("Favorite toggle failed:", err);
   }

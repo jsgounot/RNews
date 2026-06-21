@@ -57,6 +57,18 @@
     </form>
   </div>
 
+  <div class="settings-section">
+    <h3>Preferences</h3>
+    <form action="/settings/preferences" method="post" class="settings-form">
+      <label class="checkbox-label">
+        <input type="checkbox" name="auto_upvote_on_favorite" value="true"
+               {% if user.auto_upvote_on_favorite %}checked{% endif %}/>
+        Automatically upvote a post when I add it to my favorites
+      </label>
+      <button type="submit">Save preferences</button>
+    </form>
+  </div>
+
   {# ── Teams tab ── #}
   {% elif tab == 'teams' %}
   <div class="settings-section">

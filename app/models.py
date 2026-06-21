@@ -30,6 +30,7 @@ class User(Base):
     created_at = Column(DateTime, default=utcnow)
     is_active = Column(Boolean, default=True)
     is_superadmin = Column(Boolean, default=False, nullable=False)
+    auto_upvote_on_favorite = Column(Boolean, default=True, nullable=False)
 
     items = relationship("Item", foreign_keys="[Item.submitter_id]", back_populates="submitter")
     votes = relationship("Vote", back_populates="user")
