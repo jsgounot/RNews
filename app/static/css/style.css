@@ -786,6 +786,7 @@ footer {
 /* ── Tag heading ──────────────────────────────────────────────────────────── */
 .tag-heading { margin-bottom: 16px; }
 .tag-heading h2 { font-size: 1.05rem; font-weight: 500; }
+.mode-toggle { display: flex; gap: 4px; }
 
 /* ── Utility ──────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "macros.html" import item_row %}
+
+{% block title %}
+  {% if tags_found %}{{ tags_found | map(attribute='name') | join(' + ') }}{% else %}Tags{% endif %} — RNews
+{% endblock %}
+
+{# Base URL preserving q and mode for all option links #}
+{% set base %}tags?q={{ tag_slugs }}&mode={{ mode }}{% endset %}
+
+{% block content %}
+<div class="page-index">
+
+  {# Options bar #}
+  <div class="options-bar">
+    <div class="period-options">
+      <span class="options-label">Top</span>
+      {% for d in [1, 2, 3, 7, 14, 30] %}
+        <a href="/{{ base }}&days={{ d }}&limit={{ limit }}&sort={{ sort }}"
+           class="period-btn {% if days == d %}active{% endif %}">{{ d }}d</a>
+      {% endfor %}
+    </div>
+    <div class="limit-options">
+      <span class="options-label">Show</span>
+      {% for n in [10, 20, 50] %}
+        <a href="/{{ base }}&days={{ days }}&limit={{ n }}&sort={{ sort }}"
+           class="period-btn {% if limit == n %}active{% endif %}">{{ n }}</a>
+      {% endfor %}
+    </div>
+    <div class="sort-options">
+      <a href="/{{ base }}&days={{ days }}&limit={{ limit }}&sort=score"
+         class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
+      <a href="/{{ base }}&days={{ days }}&limit={{ limit }}&sort=time"
+         class="period-btn {% if sort == 'time' %}active{% endif %}">new</a>
+    </div>
+  </div>
+
+  {# Tag chips + mode toggle #}
+  <div class="tag-heading">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <h2>
+        {% for tag in tags_found %}
+          <a href="/tag/{{ tag.slug }}" class="tag-chip-lg" style="background:{{ tag_color(tag.name) }}">#{{ tag.name }}</a>
+        {% endfor %}
+        &nbsp;— {{ 'newest' if sort == 'time' else 'top' }} {{ limit }}, last {{ days }}d
+      </h2>
+      {% if tags_found | length > 1 %}
+      <div class="mode-toggle">
+        <a href="/{{ base | replace('mode=' ~ mode, 'mode=intersection') }}&days={{ days }}&limit={{ limit }}&sort={{ sort }}"
+           class="period-btn {% if mode == 'intersection' %}active{% endif %}"
+           title="Show items that have ALL selected tags">AND</a>
+        <a href="/{{ base | replace('mode=' ~ mode, 'mode=union') }}&days={{ days }}&limit={{ limit }}&sort={{ sort }}"
+           class="period-btn {% if mode == 'union' %}active{% endif %}"
+           title="Show items that have ANY selected tag">OR</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not tags_found %}
+  <div class="empty-state">No tags selected. Use the search bar to find tags.</div>
+  {% elif items %}
+  <table class="items-table">
+    <tbody>
+      {% for item in items %}
+        {{ item_row(item, loop.index, voted, user, show_day=True, favorited=favorited) }}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">No items found for this combination.</div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -21,11 +21,8 @@
     {% for tag in tags_found %}
       <a href="/tag/{{ tag.slug }}" class="tag-chip" style="background:{{ tag_color(tag.name) }}">#{{ tag.name }}</a>
     {% endfor %}
-    {# Permalink for this tag combo #}
-    <span class="permalink-hint">
-      Permalink:
-      <a href="/search?q={{ q }}&tag_mode=true" class="permalink">/search?q={{ q }}&tag_mode=true</a>
-    </span>
+    <a href="/tags?q={{ tags_found | map(attribute='slug') | join(',') }}&mode=intersection"
+       class="period-btn" style="margin-left:8px">View as tag page →</a>
   </div>
   {% endif %}
 

@@ -605,6 +605,58 @@ def _search_filter_items(raw_items: list, user: Optional[User]) -> tuple:
     return visible, item_source_team
 
 
+@app.get("/tags", response_class=HTMLResponse)
+def multi_tag_page(
+    request: Request,
+    q: str = Query(""),
+    mode: str = Query("intersection", pattern="^(union|intersection)$"),
+    days: int = Query(7, ge=1, le=365),
+    limit: int = Query(20, ge=5, le=100),
+    sort: str = Query("score", pattern="^(score|time)$"),
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    tags_found = []
+    if q:
+        for s in [slugify(t.strip()) for t in q.split(",") if t.strip()]:
+            tag = db.query(Tag).filter(Tag.slug == s).first()
+            if tag:
+                tags_found.append(tag)
+
+    items = []
+    if tags_found:
+        cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+        base_q = db.query(Item).filter(
+            Item.is_team_only == False,  # noqa: E712
+            Item.created_at >= cutoff,
+        )
+        if mode == "union":
+            tag_ids = [t.id for t in tags_found]
+            base_q = base_q.filter(Item.tags.any(Tag.id.in_(tag_ids)))
+        else:
+            for tag in tags_found:
+                base_q = base_q.filter(Item.tags.any(Tag.id == tag.id))
+        items = _sort_items(base_q.all(), sort)[:limit]
+
+    voted = user_voted_items(db, user, items)
+    favorited = user_favorited_items(db, user, items)
+    tag_slugs = ",".join(t.slug for t in tags_found)
+
+    return templates.TemplateResponse(request, "tags.html", {
+        "tags_found": tags_found,
+        "tag_slugs": tag_slugs,
+        "q": q,
+        "mode": mode,
+        "days": days,
+        "limit": limit,
+        "sort": sort,
+        "items": items,
+        "voted": voted,
+        "favorited": favorited,
+        "user": user,
+    })
+
+
 @app.get("/search", response_class=HTMLResponse)
 def search(
     request: Request,
