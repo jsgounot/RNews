@@ -266,6 +266,7 @@ footer {
 .item-date { font-size: 0.75rem; color: var(--text-light); margin-left: 6px; }
 
 .robot-icon { vertical-align: middle; margin-left: 4px; opacity: 0.55; }
+.new-tag-warning { margin-top: 4px; font-size: 0.8rem; color: #a05c00; }
 
 /* Paper column */
 .col-paper { font-size: 0.78rem; color: var(--text-muted); }

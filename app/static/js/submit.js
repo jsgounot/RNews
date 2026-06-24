@@ -73,6 +73,7 @@ const MAX_TAGS = 5;
 const tagsInput = document.getElementById("tags-input");
 const tagSuggestions = document.getElementById("tag-suggestions");
 const tagHint = document.getElementById("tag-hint");
+const newTagWarning = document.getElementById("new-tag-warning");
 let suggestTimeout = null;
 
 if (tagsInput && tagSuggestions) {
@@ -112,13 +113,18 @@ function getCurrentTag() {
 }
 
 async function fetchSuggestions() {
-  if (countTags() >= MAX_TAGS) { hideSuggestions(); return; }
+  if (countTags() >= MAX_TAGS) { hideSuggestions(); hideNewTagWarning(); return; }
   const query = getCurrentTag();
-  if (query.length < 2) { hideSuggestions(); return; }
+  if (query.length < 2) { hideSuggestions(); hideNewTagWarning(); return; }
   try {
     const res = await fetch(`/api/tags/suggest?q=${encodeURIComponent(query)}`);
     const tags = await res.json();
-    if (tags.length === 0) { hideSuggestions(); return; }
+    if (tags.length === 0) {
+      hideSuggestions();
+      showNewTagWarning();
+      return;
+    }
+    hideNewTagWarning();
     tagSuggestions.innerHTML = "";
     tags.forEach((tag) => {
       const item = document.createElement("div");
@@ -139,6 +145,7 @@ function selectTag(name) {
   if (parts.length > MAX_TAGS) parts.length = MAX_TAGS;
   tagsInput.value = parts.join(", ") + (parts.length < MAX_TAGS ? ", " : "");
   hideSuggestions();
+  hideNewTagWarning();
   updateTagHint();
   tagsInput.focus();
 }
@@ -146,6 +153,14 @@ function selectTag(name) {
 function hideSuggestions() {
   tagSuggestions.classList.add("hidden");
   tagSuggestions.innerHTML = "";
+}
+
+function showNewTagWarning() {
+  if (newTagWarning) newTagWarning.classList.remove("hidden");
+}
+
+function hideNewTagWarning() {
+  if (newTagWarning) newTagWarning.classList.add("hidden");
 }
 
 // Init hint
