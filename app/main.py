@@ -1918,7 +1918,7 @@ def _parse_pub_date(raw: str) -> Optional[_date]:
     if not raw:
         return None
     raw = raw.strip()
-    for fmt in ("%Y %b %d", "%Y %b", "%Y-%m-%d", "%Y-%m", "%Y"):
+    for fmt in ("%Y %b %d", "%Y %b", "%Y%m%d", "%Y-%m-%d", "%Y-%m", "%Y"):
         try:
             return datetime.strptime(raw, fmt).date()
         except ValueError:
