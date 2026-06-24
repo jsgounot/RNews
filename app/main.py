@@ -154,6 +154,9 @@ def normalize_doi_url(url: str) -> str:
         if lower.startswith(prefix):
             path = stripped[len(prefix):]
             return f"https://doi.org/{path}"
+    # doi: prefix (e.g. "doi:10.1038/xxx")
+    if lower.startswith("doi:"):
+        return f"https://doi.org/{stripped[4:]}"
     # Bare DOI: starts with "10."
     if lower.startswith("10."):
         return f"https://doi.org/{stripped}"
