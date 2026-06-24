@@ -51,7 +51,7 @@
         <span class="tag-chip-lg" style="background:{{ tag_color(tag.name) }}">#{{ tag.name }}</span>
         &nbsp;— {{ 'newest' if sort == 'time' else 'top' }} {{ limit }}, last {{ days }}d
       </h2>
-      {% if user %}
+      {# {% if user %}
       <button
         class="save-tag-btn {% if tag_saved %}saved{% endif %}"
         data-slug="{{ tag.slug }}"
@@ -59,7 +59,7 @@
         <span class="save-icon">★</span>
         <span class="save-label">{% if tag_saved %}Saved{% else %}Save tag{% endif %}</span>
       </button>
-      {% endif %}
+      {% endif %} #}
     </div>
   </div>
   {% endif %}
