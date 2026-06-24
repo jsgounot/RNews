@@ -1933,6 +1933,28 @@ def _parse_pub_date(raw: str) -> Optional[_date]:
     return None
 
 
+def _best_pub_date(paper: dict) -> Optional[_date]:
+    """Return the best available publication date for a paper.
+
+    Prefers pub_date unless it is a Dec 31 placeholder or in the future,
+    in which case falls back to epub_date, then gives up (caller uses utcnow).
+    """
+    today = datetime.now(timezone.utc).date()
+
+    def _is_usable(d: Optional[_date]) -> bool:
+        return d is not None and d <= today and not (d.month == 12 and d.day == 31)
+
+    dp = _parse_pub_date(paper.get("pub_date", ""))
+    if _is_usable(dp):
+        return dp
+
+    dep = _parse_pub_date(paper.get("epub_date", ""))
+    if _is_usable(dep):
+        return dep
+
+    return None
+
+
 REQUIRED_INGEST_FIELDS = ("doi", "title", "journal", "pub_date", "authors", "tags")
 
 
@@ -1950,13 +1972,13 @@ def _validate_paper(paper: dict) -> Optional[str]:
     return None
 
 
-def _ingest_papers(papers: list, db: Session):
-    """Generator: yields log lines while inserting papers into the DB."""
+def _ingest_papers(papers: list, db: Session, update_existing: bool = False):
+    """Generator: yields log lines while inserting (or updating) papers in the DB."""
     bot_id = get_or_create_bot_user()
     existing_urls = {row[0] for row in db.query(Item.url).filter(Item.url.isnot(None)).all()}
     existing_display = {row[0] for row in db.query(Item.display_url).filter(Item.display_url.isnot(None)).all()}
 
-    skipped_error = skipped_dup = skipped_missing = inserted = 0
+    skipped_error = skipped_dup = skipped_missing = inserted = updated = 0
 
     for i, paper in enumerate(papers, 1):
         # Validation
@@ -1973,40 +1995,64 @@ def _ingest_papers(papers: list, db: Session):
         doi_url = normalize_doi_url(paper["doi"])
         display_url = paper.get("display_url") or None
 
-        # Duplicate check
-        if doi_url in existing_urls or doi_url in existing_display:
-            skipped_dup += 1
-            yield f"[{i}/{len(papers)}] DUP   {paper['title'][:60]}\n"
-            continue
-        if display_url and (display_url in existing_urls or display_url in existing_display):
-            skipped_dup += 1
-            yield f"[{i}/{len(papers)}] DUP   {paper['title'][:60]} (display_url match)\n"
-            continue
+        # Duplicate detection (fast in-memory check)
+        is_dup = (
+            doi_url in existing_urls or doi_url in existing_display
+            or (display_url and (display_url in existing_urls or display_url in existing_display))
+        )
 
-        # Parse date → use as created_at
-        pub_date_obj = _parse_pub_date(paper["pub_date"])
+        # Shared field derivation (needed for both insert and update)
+        pub_date_obj = _best_pub_date(paper)
         if pub_date_obj:
             created_at = datetime(pub_date_obj.year, pub_date_obj.month, pub_date_obj.day)
             pub_date_str = pub_date_obj.strftime("%Y-%m-%d")
         else:
             created_at = datetime.now(timezone.utc).replace(tzinfo=None)
-            pub_date_str = paper["pub_date"]
+            pub_date_str = paper.get("pub_date", "")
 
-        # Authors
         authors = paper["authors"]
         first_author = authors[0] if authors else None
         last_author = authors[-1] if len(authors) > 1 else None
-
-        # Journal display name
         journal_display = _JOURNAL_INDEX[paper["journal"].lower()]
+        tag_names = [t["tag"].strip().lower() for t in paper["tags"] if t.get("tag")][:5]
 
-        # Tags (up to 5, ignore low-confidence tags that have no tag string)
-        tag_names = [
-            t["tag"].strip().lower()
-            for t in paper["tags"]
-            if t.get("tag")
-        ][:5]
+        if is_dup:
+            if not update_existing:
+                skipped_dup += 1
+                yield f"[{i}/{len(papers)}] DUP   {paper['title'][:60]}\n"
+                continue
 
+            # Find the existing item in the DB
+            existing = (
+                db.query(Item).filter(Item.url == doi_url).first()
+                or db.query(Item).filter(Item.display_url == doi_url).first()
+                or (display_url and db.query(Item).filter(Item.url == display_url).first())
+                or (display_url and db.query(Item).filter(Item.display_url == display_url).first())
+            )
+            if not existing:
+                skipped_dup += 1
+                yield f"[{i}/{len(papers)}] DUP?  {paper['title'][:60]} — matched in index but not found in DB\n"
+                continue
+
+            existing.title = paper["title"]
+            existing.journal = journal_display
+            existing.first_author = first_author
+            existing.last_author = last_author
+            existing.publication_date = pub_date_str
+            existing.created_at = created_at
+            existing.auto_ingested = True
+            if display_url:
+                existing.display_url = display_url
+            existing.tags.clear()
+            for name in tag_names:
+                existing.tags.append(get_or_create_tag(db, name))
+            db.commit()
+
+            updated += 1
+            yield f"[{i}/{len(papers)}] UPD   {paper['title'][:60]}\n"
+            continue
+
+        # Insert new item
         item = Item(
             url=doi_url,
             display_url=display_url,
@@ -2038,6 +2084,7 @@ def _ingest_papers(papers: list, db: Session):
     yield (
         f"\n--- Done ---\n"
         f"Inserted:        {inserted}\n"
+        f"Updated:         {updated}\n"
         f"Skipped (dup):   {skipped_dup}\n"
         f"Skipped (error): {skipped_error}\n"
         f"Skipped (other): {skipped_missing}\n"
@@ -2064,10 +2111,9 @@ async def admin_ingest(
     if not user or not user.is_superadmin:
         raise HTTPException(status_code=403, detail="Superadmin only")
 
-    if file is None:
-        # Re-parse to get the file from form
-        form = await request.form()
-        file = form.get("file")
+    form = await request.form()
+    file = form.get("file")
+    update_existing = form.get("update_existing", "") in ("1", "on", "true", "yes")
 
     if not file:
         raise HTTPException(status_code=400, detail="No file uploaded")
@@ -2082,6 +2128,6 @@ async def admin_ingest(
         raise HTTPException(status_code=400, detail="Expected a JSON array")
 
     return StreamingResponse(
-        _ingest_papers(papers, db),
+        _ingest_papers(papers, db, update_existing=update_existing),
         media_type="text/plain; charset=utf-8",
     )
