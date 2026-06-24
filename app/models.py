@@ -20,7 +20,7 @@ class ItemTag(Base):
     vote_count = Column(Integer, default=10, nullable=False)
 
     item = relationship("Item", back_populates="item_tags")
-    tag  = relationship("Tag",  back_populates="item_tags")
+    tag  = relationship("Tag",  back_populates="item_tags", lazy="joined")
 
 
 class ItemTagVote(Base):
@@ -111,7 +111,7 @@ class Item(Base):
 
     submitter = relationship("User", foreign_keys=[submitter_id], back_populates="items")
     editor = relationship("User", foreign_keys=[last_edited_by])
-    item_tags    = relationship("ItemTag", back_populates="item", cascade="all, delete-orphan")
+    item_tags    = relationship("ItemTag", back_populates="item", cascade="all, delete-orphan", lazy="selectin")
     tags         = relationship("Tag", secondary="item_tags", viewonly=True,
                                overlaps="item_tags,item")
     votes = relationship("Vote", back_populates="item", cascade="all, delete-orphan")
