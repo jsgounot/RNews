@@ -681,12 +681,22 @@ def search(
     request: Request,
     q: str = Query(""),
     tag_mode: bool = Query(False),
+    sort: str = Query("score"),
+    days: Optional[int] = Query(None),
+    page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ):
+    PER_PAGE = 50
     raw_items = []
     tags_found = []
+
     if q:
+        cutoff = (
+            datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+            if days else None
+        )
+
         if tag_mode:
             slugs = [slugify(t.strip()) for t in q.split(",") if t.strip()]
             for s in slugs:
@@ -697,14 +707,26 @@ def search(
                 q_items = db.query(Item)
                 for tag in tags_found:
                     q_items = q_items.filter(Item.tags.any(Tag.id == tag.id))
+                if cutoff:
+                    q_items = q_items.filter(Item.created_at >= cutoff)
                 raw_items = q_items.all()
-                raw_items.sort(key=lambda i: (-i.score, i.created_at))
         else:
-            search_term = f"%{q}%"
-            raw_items = db.query(Item).filter(Item.title.ilike(search_term)).all()
-            raw_items.sort(key=lambda i: (-i.score, i.created_at))
+            q_items = db.query(Item).filter(Item.title.ilike(f"%{q}%"))
+            if cutoff:
+                q_items = q_items.filter(Item.created_at >= cutoff)
+            raw_items = q_items.all()
 
-    items, item_source_team = _search_filter_items(raw_items, user)
+    if sort == "time":
+        raw_items.sort(key=lambda i: i.created_at, reverse=True)
+    else:
+        raw_items.sort(key=lambda i: (-i.score, i.created_at))
+
+    all_items, item_source_team = _search_filter_items(raw_items, user)
+
+    total = len(all_items)
+    total_pages = max(1, math.ceil(total / PER_PAGE))
+    page = max(1, min(page, total_pages))
+    items = all_items[(page - 1) * PER_PAGE: page * PER_PAGE]
 
     voted = user_voted_items(db, user, items)
     favorited = user_favorited_items(db, user, items)
@@ -712,6 +734,12 @@ def search(
     return templates.TemplateResponse(request, "search.html", {
         "q": q,
         "tag_mode": tag_mode,
+        "sort": sort,
+        "days": days,
+        "page": page,
+        "total": total,
+        "total_pages": total_pages,
+        "per_page": PER_PAGE,
         "items": items,
         "item_source_team": item_source_team,
         "voted": voted,

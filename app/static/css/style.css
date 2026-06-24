@@ -781,6 +781,8 @@ footer {
 /* ── Search page ──────────────────────────────────────────────────────────── */
 .page-search h2 { margin-bottom: 16px; }
 .search-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 16px; }
+.search-pagination { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 20px; align-items: center; }
+.period-btn.disabled { opacity: 0.35; cursor: default; pointer-events: none; }
 .permalink-hint { font-size: 0.8rem; color: var(--text-muted); }
 .permalink { font-family: var(--font); font-size: 0.8rem; }
 

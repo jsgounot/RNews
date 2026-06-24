@@ -3,17 +3,41 @@
 
 {% block title %}Search{% if q %}: {{ q }}{% endif %} — RNews{% endblock %}
 
+{# Base URL that preserves q and tag_mode for option links #}
+{% set base %}?q={{ q | urlencode }}&tag_mode={{ 'true' if tag_mode else 'false' }}{% endset %}
+
 {% block content %}
 <div class="page-search">
   <h2>
     {% if q %}
       Results for "{{ q }}"
       {% if tag_mode %}(tag search){% endif %}
-      — {{ items | length }} found
+      — {{ total }} found
     {% else %}
       Search
     {% endif %}
   </h2>
+
+  {# Options bar — only shown when there are results or a query #}
+  {% if q %}
+  <div class="options-bar">
+    <div class="period-options">
+      <span class="options-label">Period</span>
+      <a href="{{ base }}&sort={{ sort }}&page=1"
+         class="period-btn {% if not days %}active{% endif %}">all</a>
+      {% for d in [7, 30, 90, 365] %}
+        <a href="{{ base }}&sort={{ sort }}&days={{ d }}&page=1"
+           class="period-btn {% if days == d %}active{% endif %}">{{ d }}d</a>
+      {% endfor %}
+    </div>
+    <div class="sort-options">
+      <a href="{{ base }}&sort=score{% if days %}&days={{ days }}{% endif %}&page=1"
+         class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
+      <a href="{{ base }}&sort=time{% if days %}&days={{ days }}{% endif %}&page=1"
+         class="period-btn {% if sort == 'time' %}active{% endif %}">new</a>
+    </div>
+  </div>
+  {% endif %}
 
   {# Tag chips if tag mode #}
   {% if tag_mode and tags_found %}
@@ -30,11 +54,43 @@
   <table class="items-table">
     <tbody>
       {% for item in items %}
-        {{ item_row(item, loop.index, voted, user, show_day=True, favorited=favorited,
+        {{ item_row(item, (page - 1) * per_page + loop.index, voted, user,
+                    show_day=True, favorited=favorited,
                     source_team=item_source_team.get(item.id)) }}
       {% endfor %}
     </tbody>
   </table>
+
+  {# Pagination #}
+  {% if total_pages > 1 %}
+  <div class="search-pagination">
+    {% set pg_base %}{{ base }}&sort={{ sort }}{% if days %}&days={{ days }}{% endif %}{% endset %}
+    {% if page > 1 %}
+      <a href="{{ pg_base }}&page={{ page - 1 }}" class="period-btn">← prev</a>
+    {% else %}
+      <span class="period-btn disabled">← prev</span>
+    {% endif %}
+
+    {% for p in range(1, total_pages + 1) %}
+      {% if total_pages <= 7
+            or p == 1
+            or p == total_pages
+            or (p >= page - 2 and p <= page + 2) %}
+        <a href="{{ pg_base }}&page={{ p }}"
+           class="period-btn {% if p == page %}active{% endif %}">{{ p }}</a>
+      {% elif p == page - 3 or p == page + 3 %}
+        <span class="period-btn disabled">…</span>
+      {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+      <a href="{{ pg_base }}&page={{ page + 1 }}" class="period-btn">next →</a>
+    {% else %}
+      <span class="period-btn disabled">next →</span>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% elif q %}
   <div class="empty-state">No results found.</div>
   {% endif %}
