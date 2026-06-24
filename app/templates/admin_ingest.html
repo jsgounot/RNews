@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Admin — Bulk Ingest{% endblock %}
+
+{% block content %}
+<div class="page-section">
+  <h2>Bulk ingest tagged papers</h2>
+  <p>Upload a JSON array of papers (e.g. <code>tags.json</code> from the tagger pipeline).
+     Papers with errors, missing required fields, or unknown journals are skipped.
+     Duplicates (matched by DOI URL or display URL) are also skipped.</p>
+
+  <form id="ingest-form" method="post" enctype="multipart/form-data" action="/admin/ingest">
+    <div style="margin-bottom:1rem">
+      <label for="file"><strong>JSON file:</strong></label><br/>
+      <input type="file" name="file" id="file" accept=".json" required style="margin-top:.4rem"/>
+    </div>
+    <button type="submit" class="btn btn-primary" id="submit-btn">Start ingestion</button>
+  </form>
+
+  <pre id="log" style="margin-top:1.5rem;background:#111;color:#cfc;padding:1rem;border-radius:6px;
+       max-height:60vh;overflow-y:auto;font-size:.8rem;display:none"></pre>
+</div>
+
+<script>
+document.getElementById("ingest-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById("submit-btn");
+  const log = document.getElementById("log");
+  btn.disabled = true;
+  btn.textContent = "Ingesting…";
+  log.style.display = "block";
+  log.textContent = "";
+
+  const formData = new FormData(this);
+  const resp = await fetch("/admin/ingest", { method: "POST", body: formData });
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    log.textContent += decoder.decode(value, { stream: true });
+    log.scrollTop = log.scrollHeight;
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Start ingestion";
+});
+</script>
+{% endblock %}

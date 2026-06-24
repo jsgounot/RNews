@@ -7,9 +7,9 @@ from urllib.parse import urlparse
 import httpx
 
 from fastapi import (
-    FastAPI, Request, Form, Depends, HTTPException, Query
+    FastAPI, Request, Form, Depends, HTTPException, Query, UploadFile
 )
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from slugify import slugify
@@ -132,6 +132,34 @@ def _edit_distance(a: str, b: str) -> int:
     return prev[-1]
 
 
+def normalize_doi_url(url: str) -> str:
+    """Normalize any DOI form to https://doi.org/10.xxx.
+
+    Accepts:
+      - bare DOI:           10.1234/something
+      - http/https doi.org: http://doi.org/10.xxx  or  https://doi.org/10.xxx
+      - dx.doi.org variant: https://dx.doi.org/10.xxx
+    Returns the input unchanged if it doesn't look like a DOI.
+    """
+    if not url:
+        return url
+    stripped = url.strip()
+    lower = stripped.lower()
+    # Already canonical
+    if lower.startswith("https://doi.org/10."):
+        return stripped
+    # http → https, dx.doi.org → doi.org
+    for prefix in ("http://dx.doi.org/", "https://dx.doi.org/",
+                   "http://doi.org/", "https://doi.org/"):
+        if lower.startswith(prefix):
+            path = stripped[len(prefix):]
+            return f"https://doi.org/{path}"
+    # Bare DOI: starts with "10."
+    if lower.startswith("10."):
+        return f"https://doi.org/{stripped}"
+    return stripped
+
+
 async def _resolve_display_url(url: str) -> Optional[str]:
     """If url is a DOI link, follow redirects and return the final endpoint URL for display.
     Returns None on failure or if the URL is not a DOI."""
@@ -147,14 +175,22 @@ async def _resolve_display_url(url: str) -> Optional[str]:
 
 
 def find_exact_url(db: Session, url: str, exclude_team_only: bool = False) -> Optional[Item]:
-    """Return the existing item with this URL, or None.
-    If exclude_team_only=True, items submitted only to a team are ignored."""
+    """Return an existing item matching this URL, or None.
+
+    Checks both Item.url and Item.display_url so that a DOI URL and its
+    resolved publisher endpoint are treated as the same paper.
+    If exclude_team_only=True, items submitted only to a team are ignored.
+    """
     if not url:
         return None
-    q = db.query(Item).filter(Item.url == url)
-    if exclude_team_only:
-        q = q.filter(Item.is_team_only == False)  # noqa: E712
-    return q.first()
+
+    def _q(col):
+        q = db.query(Item).filter(col == url)
+        if exclude_team_only:
+            q = q.filter(Item.is_team_only == False)  # noqa: E712
+        return q.first()
+
+    return _q(Item.url) or _q(Item.display_url)
 
 
 def find_close_titles(db: Session, title: str, max_distance: int = 3,
@@ -646,7 +682,7 @@ async def submit_item(
     if not user:
         return RedirectResponse("/login", status_code=302)
 
-    url = url.strip()
+    url = normalize_doi_url(url.strip())
     title = title.strip()
     errors = []
 
@@ -1395,7 +1431,7 @@ async def team_submit_item(
     if role not in ("admin", "contributor"):
         raise HTTPException(status_code=403, detail="Not allowed")
 
-    url = url.strip()
+    url = normalize_doi_url(url.strip())
     title = title.strip()
     errors = []
 
@@ -1796,3 +1832,204 @@ def forgot_password_submit(
     return templates.TemplateResponse(request, "forgot_password.html", {
         "sent": True, "error": ""
     })
+
+
+# ── Admin: bulk ingest ────────────────────────────────────────────────────────
+
+import json as _json
+import re as _re
+from datetime import date as _date
+from app.database import get_or_create_bot_user
+
+# Build lookup: abbrev (lower) -> display name, and pubmed name (lower) -> display name
+def _build_journal_index() -> dict:
+    import json as _j
+    from pathlib import Path as _P
+    path = _P(__file__).parent.parent / "journals.json"
+    try:
+        entries = _j.loads(path.read_text())
+    except Exception:
+        return {}
+    idx = {}
+    for e in entries:
+        display = e["name"]
+        if e.get("abbrev"):
+            idx[e["abbrev"].lower()] = display
+        idx[e["pubmed"].lower()] = display
+    return idx
+
+_JOURNAL_INDEX: dict = _build_journal_index()
+
+
+def _parse_pub_date(raw: str) -> Optional[_date]:
+    """Parse PubMed pub_date strings like '2026 Jun 9', '2026 Feb', '2026 Jan'."""
+    if not raw:
+        return None
+    raw = raw.strip()
+    for fmt in ("%Y %b %d", "%Y %b", "%Y-%m-%d", "%Y-%m", "%Y"):
+        try:
+            return datetime.strptime(raw, fmt).date()
+        except ValueError:
+            continue
+    # Try stripping a trailing day if month-only parse fails after removing suffix
+    m = _re.match(r"^(\d{4})\s+([A-Za-z]+)", raw)
+    if m:
+        try:
+            return datetime.strptime(f"{m.group(1)} {m.group(2)}", "%Y %b").date()
+        except ValueError:
+            pass
+    return None
+
+
+REQUIRED_INGEST_FIELDS = ("doi", "title", "journal", "pub_date", "authors", "tags")
+
+
+def _validate_paper(paper: dict) -> Optional[str]:
+    """Return an error string if the paper should be skipped, else None."""
+    if paper.get("tag_error"):
+        return f"tag_error: {paper['tag_error']}"
+    for field in REQUIRED_INGEST_FIELDS:
+        val = paper.get(field)
+        if not val or (isinstance(val, list) and len(val) == 0):
+            return f"missing field: {field}"
+    journal_key = paper["journal"].lower()
+    if journal_key not in _JOURNAL_INDEX:
+        return f"unknown journal: {paper['journal']!r}"
+    return None
+
+
+def _ingest_papers(papers: list, db: Session):
+    """Generator: yields log lines while inserting papers into the DB."""
+    bot_id = get_or_create_bot_user()
+    existing_urls = {row[0] for row in db.query(Item.url).filter(Item.url.isnot(None)).all()}
+    existing_display = {row[0] for row in db.query(Item.display_url).filter(Item.display_url.isnot(None)).all()}
+
+    skipped_error = skipped_dup = skipped_missing = inserted = 0
+
+    for i, paper in enumerate(papers, 1):
+        # Validation
+        err = _validate_paper(paper)
+        if err:
+            if "tag_error" in err:
+                skipped_error += 1
+            else:
+                skipped_missing += 1
+            yield f"[{i}/{len(papers)}] SKIP  {paper.get('title', '?')[:60]} — {err}\n"
+            continue
+
+        # Normalize DOI → canonical URL
+        doi_url = normalize_doi_url(paper["doi"])
+        display_url = paper.get("display_url") or None
+
+        # Duplicate check
+        if doi_url in existing_urls or doi_url in existing_display:
+            skipped_dup += 1
+            yield f"[{i}/{len(papers)}] DUP   {paper['title'][:60]}\n"
+            continue
+        if display_url and (display_url in existing_urls or display_url in existing_display):
+            skipped_dup += 1
+            yield f"[{i}/{len(papers)}] DUP   {paper['title'][:60]} (display_url match)\n"
+            continue
+
+        # Parse date → use as created_at
+        pub_date_obj = _parse_pub_date(paper["pub_date"])
+        if pub_date_obj:
+            created_at = datetime(pub_date_obj.year, pub_date_obj.month, pub_date_obj.day)
+            pub_date_str = pub_date_obj.strftime("%Y-%m-%d")
+        else:
+            created_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            pub_date_str = paper["pub_date"]
+
+        # Authors
+        authors = paper["authors"]
+        first_author = authors[0] if authors else None
+        last_author = authors[-1] if len(authors) > 1 else None
+
+        # Journal display name
+        journal_display = _JOURNAL_INDEX[paper["journal"].lower()]
+
+        # Tags (up to 5, ignore low-confidence tags that have no tag string)
+        tag_names = [
+            t["tag"].strip().lower()
+            for t in paper["tags"]
+            if t.get("tag")
+        ][:5]
+
+        item = Item(
+            url=doi_url,
+            display_url=display_url,
+            title=paper["title"],
+            item_type="paper",
+            journal=journal_display,
+            first_author=first_author,
+            last_author=last_author,
+            publication_date=pub_date_str,
+            doi=doi_url,
+            submitter_id=bot_id,
+            created_at=created_at,
+            auto_ingested=True,
+        )
+        for name in tag_names:
+            item.tags.append(get_or_create_tag(db, name))
+
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+
+        existing_urls.add(doi_url)
+        if display_url:
+            existing_display.add(display_url)
+
+        inserted += 1
+        yield f"[{i}/{len(papers)}] OK    {paper['title'][:60]}\n"
+
+    yield (
+        f"\n--- Done ---\n"
+        f"Inserted:        {inserted}\n"
+        f"Skipped (dup):   {skipped_dup}\n"
+        f"Skipped (error): {skipped_error}\n"
+        f"Skipped (other): {skipped_missing}\n"
+    )
+
+
+@app.get("/admin/ingest", response_class=HTMLResponse)
+def admin_ingest_page(
+    request: Request,
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user or not user.is_superadmin:
+        raise HTTPException(status_code=403, detail="Superadmin only")
+    return templates.TemplateResponse(request, "admin_ingest.html", {"user": user})
+
+
+@app.post("/admin/ingest")
+async def admin_ingest(
+    request: Request,
+    file: Optional[UploadFile] = None,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user or not user.is_superadmin:
+        raise HTTPException(status_code=403, detail="Superadmin only")
+
+    if file is None:
+        # Re-parse to get the file from form
+        form = await request.form()
+        file = form.get("file")
+
+    if not file:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+
+    raw = await file.read()
+    try:
+        papers = _json.loads(raw)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    if not isinstance(papers, list):
+        raise HTTPException(status_code=400, detail="Expected a JSON array")
+
+    return StreamingResponse(
+        _ingest_papers(papers, db),
+        media_type="text/plain; charset=utf-8",
+    )

@@ -33,6 +33,9 @@
     {% if item.url %}
       <a href="{{ item.url }}" class="item-title" target="_blank" rel="noopener">{{ item.title }}</a>
       <span class="item-domain">({{ item.domain }})</span>
+      {% if item.auto_ingested %}
+        <img src="/static/icons/robot.svg" class="robot-icon" title="Auto-ingested" alt="robot" width="14" height="14"/>
+      {% endif %}
     {% else %}
       <a href="/item/{{ item.id }}" class="item-title">{{ item.title }}</a>
     {% endif %}

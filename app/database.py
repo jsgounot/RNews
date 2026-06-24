@@ -31,10 +31,41 @@ def get_db():
         db.close()
 
 
+BOT_USERNAME = "robot"
+BOT_EMAIL = "robot@rnews.internal"
+
+
+def get_or_create_bot_user() -> int:
+    """Return the bot user's id, creating the account if it doesn't exist yet."""
+    import secrets as _secrets
+    from app.auth import hash_password
+
+    db = SessionLocal()
+    try:
+        from app.models import User
+        bot = db.query(User).filter(User.username == BOT_USERNAME).first()
+        if bot:
+            return bot.id
+        bot = User(
+            email=BOT_EMAIL,
+            username=BOT_USERNAME,
+            hashed_password=hash_password(_secrets.token_hex(32)),
+            is_active=True,
+            is_superadmin=False,
+        )
+        db.add(bot)
+        db.commit()
+        db.refresh(bot)
+        return bot.id
+    finally:
+        db.close()
+
+
 def init_db():
     from app import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
     _migrate()
+    get_or_create_bot_user()
 
 
 def _migrate():
@@ -55,6 +86,10 @@ def _migrate():
             "ALTER TABLE users ADD COLUMN auto_upvote_on_favorite BOOLEAN NOT NULL DEFAULT TRUE",
         ),
         "ALTER TABLE items ADD COLUMN display_url TEXT",
+        (
+            "ALTER TABLE items ADD COLUMN auto_ingested INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE items ADD COLUMN auto_ingested BOOLEAN NOT NULL DEFAULT FALSE",
+        ),
     ]
 
     with engine.connect() as conn:

@@ -73,6 +73,9 @@ class Item(Base):
     # If True, this item was submitted directly to a team and won't appear on main feed
     is_team_only = Column(Boolean, default=False, nullable=False)
 
+    # If True, this item was ingested automatically (robot icon displayed)
+    auto_ingested = Column(Boolean, default=False, nullable=False)
+
     # Optional: this item is a follow-up of another item
     follow_up_of = Column(Integer, ForeignKey("items.id"), nullable=True)
 
