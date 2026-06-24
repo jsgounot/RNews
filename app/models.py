@@ -141,9 +141,9 @@ class Item(Base):
 
     @property
     def display_tags(self):
-        """Top 5 tags by vote_count for feed display."""
+        """Top 5 established tags (vote_count >= 5) for feed display."""
         sorted_its = sorted(self.item_tags, key=lambda x: x.vote_count, reverse=True)
-        return [it.tag for it in sorted_its[:5]]
+        return [it.tag for it in sorted_its if it.vote_count >= 5][:5]
 
     @property
     def domain(self):
