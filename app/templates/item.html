@@ -125,9 +125,41 @@
       {% endif %}
 
       <div class="item-tags">
-        {% for tag in item.tags %}
-          <a href="/tag/{{ tag.slug }}" class="tag-chip" style="background:{{ tag_color(tag.name) }}">#{{ tag.name }}</a>
-        {% endfor %}
+        <div class="item-tags-main">
+          {% for it in established_tags %}
+          <span class="tag-vote-wrap">
+            <button class="tag-vote-btn tag-vote-down{% if user_tag_votes.get(it.tag_id) == -1 %} active{% endif %}"
+                    data-item="{{ item.id }}" data-tag="{{ it.tag.slug }}" data-dir="-1">−</button>
+            <a href="/tag/{{ it.tag.slug }}" class="tag-chip" style="background:{{ tag_color(it.tag.name) }}">#{{ it.tag.name }}</a>
+            <button class="tag-vote-btn tag-vote-up{% if user_tag_votes.get(it.tag_id) == 1 %} active{% endif %}"
+                    data-item="{{ item.id }}" data-tag="{{ it.tag.slug }}" data-dir="1">+</button>
+          </span>
+          {% endfor %}
+        </div>
+        {% if pending_tags %}
+        <div class="item-tags-pending">
+          <span class="pending-label">Suggested:</span>
+          {% for it in pending_tags %}
+          <span class="tag-vote-wrap">
+            <button class="tag-vote-btn tag-vote-down{% if user_tag_votes.get(it.tag_id) == -1 %} active{% endif %}"
+                    data-item="{{ item.id }}" data-tag="{{ it.tag.slug }}" data-dir="-1">−</button>
+            <a href="/tag/{{ it.tag.slug }}" class="tag-chip tag-chip-pending" style="background:{{ tag_color(it.tag.name) }}">#{{ it.tag.name }}</a>
+            <button class="tag-vote-btn tag-vote-up{% if user_tag_votes.get(it.tag_id) == 1 %} active{% endif %}"
+                    data-item="{{ item.id }}" data-tag="{{ it.tag.slug }}" data-dir="1">+</button>
+          </span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if user %}
+        <div class="tag-suggest-wrap">
+          <button class="tag-suggest-toggle" id="tag-suggest-toggle">+ suggest tag</button>
+          <span class="tag-suggest-form hidden" id="tag-suggest-form">
+            <input type="text" class="tag-suggest-input" placeholder="tag name" autocomplete="off"/>
+            <button id="tag-suggest-submit">Add</button>
+            <span class="tag-suggest-status"></span>
+          </span>
+        </div>
+        {% endif %}
       </div>
 
       {# Share to team — hidden for items from private teams #}
@@ -188,7 +220,7 @@
 
           <label>Tags <span class="required">*</span>
             <input type="text" name="tags_input"
-                   value="{{ item.tags | map(attribute='name') | join(', ') }}"
+                   value="{{ established_tags | map(attribute='tag') | map(attribute='name') | join(', ') }}"
                    placeholder="tag1, tag2" maxlength="256"/>
             <span class="hint">Comma-separated, max 5.</span>
           </label>
@@ -232,6 +264,79 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+(function () {
+  // ── Tag voting ──────────────────────────────────────────────────────────────
+  document.querySelectorAll('.tag-vote-btn').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var itemId = btn.dataset.item;
+      var tagSlug = btn.dataset.tag;
+      var dir = parseInt(btn.dataset.dir, 10);
+      fetch('/api/item/' + itemId + '/tag/' + tagSlug + '/vote', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({direction: dir})
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var wrap = btn.closest('.tag-vote-wrap');
+        wrap.querySelector('.tag-vote-down').classList.toggle('active', data.user_vote === -1);
+        wrap.querySelector('.tag-vote-up').classList.toggle('active', data.user_vote === 1);
+      })
+      .catch(function (err) { console.error('tag vote error', err); });
+    });
+  });
+
+  // ── Tag suggestion ──────────────────────────────────────────────────────────
+  var suggestToggle = document.getElementById('tag-suggest-toggle');
+  var suggestForm   = document.getElementById('tag-suggest-form');
+  if (suggestToggle && suggestForm) {
+    suggestToggle.addEventListener('click', function () {
+      suggestForm.classList.toggle('hidden');
+      if (!suggestForm.classList.contains('hidden')) {
+        suggestForm.querySelector('.tag-suggest-input').focus();
+      }
+    });
+
+    var suggestSubmit = document.getElementById('tag-suggest-submit');
+    var suggestInput  = suggestForm.querySelector('.tag-suggest-input');
+    var suggestStatus = suggestForm.querySelector('.tag-suggest-status');
+
+    function doSuggest() {
+      var name = suggestInput.value.trim().toLowerCase();
+      if (!name) return;
+      suggestSubmit.disabled = true;
+      fetch('/api/item/{{ item.id }}/tag/suggest', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({tag_name: name})
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) {
+          suggestStatus.textContent = data.error;
+          suggestStatus.style.color = '#c0392b';
+          suggestSubmit.disabled = false;
+        } else {
+          location.reload();
+        }
+      })
+      .catch(function () {
+        suggestStatus.textContent = 'Error';
+        suggestStatus.style.color = '#c0392b';
+        suggestSubmit.disabled = false;
+      });
+    }
+
+    suggestSubmit.addEventListener('click', doSuggest);
+    suggestInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') doSuggest();
+    });
+  }
+})();
+</script>
+
 {% if can_edit %}
 <script>
 (function () {

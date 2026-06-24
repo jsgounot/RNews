@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 import httpx
 
 from fastapi import (
-    FastAPI, Request, Form, Depends, HTTPException, Query, UploadFile
+    FastAPI, Request, Form, Depends, HTTPException, Query, UploadFile, Body
 )
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -21,7 +21,7 @@ from app.auth import (
 )
 from app.database import get_db, init_db
 from app.models import (
-    Comment, CommentVote, Item, Tag, User, Vote,
+    Comment, CommentVote, Item, ItemTag, ItemTagVote, Tag, User, Vote,
     SavedTag, Team, TeamMember, TeamItem, FavoriteItem,
 )
 from app.services.metadata import extract_metadata, is_scientific_url
@@ -252,7 +252,7 @@ def get_items_for_period(
         Item.created_at >= start, Item.created_at < end, Item.is_team_only == False  # noqa: E712
     )
     if tag_slug:
-        q = q.join(Item.tags).filter(Tag.slug == tag_slug)
+        q = q.join(ItemTag, ItemTag.item_id == Item.id).join(Tag, Tag.id == ItemTag.tag_id).filter(Tag.slug == tag_slug)
     items = q.all()
     if sort == "score":
         items.sort(key=lambda i: (-i.score, i.created_at))
@@ -281,7 +281,7 @@ def get_top_items(
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
     q = db.query(Item).filter(Item.created_at >= cutoff, Item.is_team_only == False)  # noqa: E712
     if tag_slug:
-        q = q.join(Item.tags).filter(Tag.slug == tag_slug)
+        q = q.join(ItemTag, ItemTag.item_id == Item.id).join(Tag, Tag.id == ItemTag.tag_id).filter(Tag.slug == tag_slug)
     items = q.all()
     return _sort_items(items, sort)[:limit]
 
@@ -301,7 +301,7 @@ def get_user_feed_items(
         items = (
             db.query(Item)
             .filter(Item.is_team_only == False)  # noqa: E712
-            .join(Item.tags).filter(Tag.slug == tag_slug)
+            .join(ItemTag, ItemTag.item_id == Item.id).join(Tag, Tag.id == ItemTag.tag_id).filter(Tag.slug == tag_slug)
             .all()
         )
     else:
@@ -561,6 +561,19 @@ def item_page(
     voted_comments = user_voted_comments(db, user, comments)
     item_voted = item_id in user_voted_items(db, user, [item]) if user else False
 
+    # Tag votes for the current user on this item
+    user_tag_votes = {}
+    if user:
+        for tv in db.query(ItemTagVote).filter(
+            ItemTagVote.item_id == item_id, ItemTagVote.user_id == user.id
+        ).all():
+            user_tag_votes[tv.tag_id] = tv.direction
+
+    # Split tags by vote_count threshold
+    item_tags_sorted = sorted(item.item_tags, key=lambda x: x.vote_count, reverse=True)
+    established_tags = [it for it in item_tags_sorted if it.vote_count >= 6]
+    pending_tags     = [it for it in item_tags_sorted if it.vote_count < 6]
+
     # Item is not shareable if it was submitted to a private team
     can_share = not (
         item.is_team_only
@@ -577,6 +590,9 @@ def item_page(
         "voted_comments": voted_comments,
         "can_share": can_share,
         "can_edit": can_edit,
+        "user_tag_votes": user_tag_votes,
+        "established_tags": established_tags,
+        "pending_tags": pending_tags,
     })
 
 
@@ -825,8 +841,7 @@ async def submit_item(
 
     for name in tag_names:
         tag = get_or_create_tag(db, name)
-        if tag not in item.tags:
-            item.tags.append(tag)
+        item.item_tags.append(ItemTag(tag=tag, vote_count=10))
 
     db.add(item)
     db.commit()
@@ -854,7 +869,14 @@ def api_tags_suggest(q: str = Query(""), db: Session = Depends(get_db)):
     q = q.strip().lower()
     if not q:
         return JSONResponse([])
-    tags = db.query(Tag).filter(Tag.name.ilike(f"{q}%")).limit(10).all()
+    tags = (
+        db.query(Tag)
+        .join(ItemTag, ItemTag.tag_id == Tag.id)
+        .filter(Tag.name.ilike(f"{q}%"), ItemTag.vote_count >= 5)
+        .distinct()
+        .limit(10)
+        .all()
+    )
     return JSONResponse([{"name": t.name, "slug": t.slug} for t in tags])
 
 
@@ -935,6 +957,90 @@ def vote_comment(
     return JSONResponse({"score": comment.score, "voted": voted})
 
 
+# ── API: tag voting & suggestion ─────────────────────────────────────────────
+
+@app.post("/api/item/{item_id}/tag/{tag_slug}/vote")
+def vote_item_tag(
+    item_id: int,
+    tag_slug: str,
+    body: dict = Body(...),
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user:
+        return JSONResponse({"error": "Not logged in"}, status_code=401)
+    direction = body.get("direction")
+    if direction not in (1, -1):
+        return JSONResponse({"error": "direction must be 1 or -1"}, status_code=400)
+
+    tag = db.query(Tag).filter(Tag.slug == tag_slug).first()
+    if not tag:
+        return JSONResponse({"error": "Tag not found"}, status_code=404)
+
+    item_tag = db.query(ItemTag).filter(
+        ItemTag.item_id == item_id, ItemTag.tag_id == tag.id
+    ).first()
+    if not item_tag:
+        return JSONResponse({"error": "Tag not on this item"}, status_code=404)
+
+    existing = db.query(ItemTagVote).filter(
+        ItemTagVote.user_id == user.id,
+        ItemTagVote.item_id == item_id,
+        ItemTagVote.tag_id == tag.id,
+    ).first()
+
+    if existing:
+        if existing.direction == direction:
+            # Toggle off
+            item_tag.vote_count -= direction
+            db.delete(existing)
+            user_vote = None
+        else:
+            # Flip direction
+            item_tag.vote_count += direction * 2
+            existing.direction = direction
+            user_vote = direction
+    else:
+        item_tag.vote_count += direction
+        db.add(ItemTagVote(user_id=user.id, item_id=item_id, tag_id=tag.id, direction=direction))
+        user_vote = direction
+
+    db.commit()
+    return JSONResponse({"vote_count": item_tag.vote_count, "user_vote": user_vote})
+
+
+@app.post("/api/item/{item_id}/tag/suggest")
+def suggest_item_tag(
+    item_id: int,
+    body: dict = Body(...),
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user:
+        return JSONResponse({"error": "Not logged in"}, status_code=401)
+    name = body.get("tag_name", "").strip().lower()
+    if not name:
+        return JSONResponse({"error": "tag_name required"}, status_code=400)
+
+    item = db.query(Item).filter(Item.id == item_id).first()
+    if not item:
+        return JSONResponse({"error": "Item not found"}, status_code=404)
+
+    tag = get_or_create_tag(db, name)
+
+    existing_it = db.query(ItemTag).filter(
+        ItemTag.item_id == item_id, ItemTag.tag_id == tag.id
+    ).first()
+    if existing_it:
+        return JSONResponse({"error": "Tag already on this item"}, status_code=400)
+
+    db.add(ItemTag(item_id=item_id, tag_id=tag.id, vote_count=1))
+    db.add(ItemTagVote(user_id=user.id, item_id=item_id, tag_id=tag.id, direction=1))
+    db.commit()
+
+    return JSONResponse({"tag": {"name": tag.name, "slug": tag.slug, "id": tag.id}, "vote_count": 1, "user_vote": 1})
+
+
 # ── API: add comment ──────────────────────────────────────────────────────────
 
 @app.post("/api/comment/{item_id}")
@@ -1013,12 +1119,16 @@ async def edit_item(
         item.last_author = last_author.strip() or None
         item.publication_date = publication_date.strip() or item.publication_date
 
-    # Replace tags
-    item.tags.clear()
-    for name in tag_names:
-        tag = get_or_create_tag(db, name)
-        if tag not in item.tags:
-            item.tags.append(tag)
+    # Replace tags — preserve vote_count for kept tags, start new ones at 10
+    new_tags = [get_or_create_tag(db, name) for name in tag_names]
+    new_tag_ids = {t.id for t in new_tags}
+    current_its = {it.tag_id: it for it in db.query(ItemTag).filter(ItemTag.item_id == item_id).all()}
+    for tag_id, it in current_its.items():
+        if tag_id not in new_tag_ids:
+            db.delete(it)
+    for tag in new_tags:
+        if tag.id not in current_its:
+            db.add(ItemTag(item_id=item_id, tag_id=tag.id, vote_count=10))
 
     item.last_edited_by = user.id
     item.last_edited_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -1090,7 +1200,7 @@ def _team_items_query(db: Session, team: Team, tag_slug: Optional[str] = None):
         .filter(TeamItem.team_id == team.id)
     )
     if tag_slug:
-        q = q.join(Item.tags).filter(Tag.slug == tag_slug)
+        q = q.join(ItemTag, ItemTag.item_id == Item.id).join(Tag, Tag.id == ItemTag.tag_id).filter(Tag.slug == tag_slug)
     return q
 
 
@@ -1547,8 +1657,7 @@ async def team_submit_item(
     )
     for name in tag_names:
         tag_obj = get_or_create_tag(db, name)
-        if tag_obj not in item.tags:
-            item.tags.append(tag_obj)
+        item.item_tags.append(ItemTag(tag=tag_obj, vote_count=10))
 
     db.add(item)
     db.commit()
@@ -2046,9 +2155,10 @@ def _ingest_papers(papers: list, db: Session, update_existing: bool = False):
             existing.auto_ingested = True
             if display_url:
                 existing.display_url = display_url
-            existing.tags.clear()
+            db.query(ItemTag).filter(ItemTag.item_id == existing.id).delete(synchronize_session=False)
+            db.flush()
             for name in tag_names:
-                existing.tags.append(get_or_create_tag(db, name))
+                db.add(ItemTag(item_id=existing.id, tag_id=get_or_create_tag(db, name).id, vote_count=10))
             db.commit()
 
             updated += 1
@@ -2071,7 +2181,7 @@ def _ingest_papers(papers: list, db: Session, update_existing: bool = False):
             auto_ingested=True,
         )
         for name in tag_names:
-            item.tags.append(get_or_create_tag(db, name))
+            item.item_tags.append(ItemTag(tag=get_or_create_tag(db, name), vote_count=10))
 
         db.add(item)
         db.commit()

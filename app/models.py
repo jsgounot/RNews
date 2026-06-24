@@ -11,13 +11,34 @@ def utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-# Many-to-many: items <-> tags
-item_tags = Table(
-    "item_tags",
-    Base.metadata,
-    Column("item_id", Integer, ForeignKey("items.id"), primary_key=True),
-    Column("tag_id", Integer, ForeignKey("tags.id"), primary_key=True),
-)
+class ItemTag(Base):
+    """Association object for Item <-> Tag with community vote count."""
+    __tablename__ = "item_tags"
+
+    item_id    = Column(Integer, ForeignKey("items.id"), primary_key=True)
+    tag_id     = Column(Integer, ForeignKey("tags.id"),  primary_key=True)
+    vote_count = Column(Integer, default=10, nullable=False)
+
+    item = relationship("Item", back_populates="item_tags")
+    tag  = relationship("Tag",  back_populates="item_tags")
+
+
+class ItemTagVote(Base):
+    """Per-user vote on a tag applied to a specific item (+1 or -1)."""
+    __tablename__ = "item_tag_votes"
+
+    id         = Column(Integer, primary_key=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False)
+    item_id    = Column(Integer, ForeignKey("items.id"), nullable=False)
+    tag_id     = Column(Integer, ForeignKey("tags.id"),  nullable=False)
+    direction  = Column(Integer, nullable=False)  # +1 or -1
+    created_at = Column(DateTime, default=utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "item_id", "tag_id"),)
+
+    user = relationship("User")
+    item = relationship("Item")
+    tag  = relationship("Tag")
 
 
 class User(Base):
@@ -48,8 +69,10 @@ class Tag(Base):
     name = Column(String(64), unique=True, index=True, nullable=False)
     slug = Column(String(64), unique=True, index=True, nullable=False)
 
-    items = relationship("Item", secondary=item_tags, back_populates="tags")
-    saved_by = relationship("SavedTag", back_populates="tag", cascade="all, delete-orphan")
+    item_tags = relationship("ItemTag", back_populates="tag", cascade="all, delete-orphan")
+    items     = relationship("Item", secondary="item_tags", viewonly=True,
+                             overlaps="item_tags,tag")
+    saved_by  = relationship("SavedTag", back_populates="tag", cascade="all, delete-orphan")
 
 
 class Item(Base):
@@ -88,7 +111,9 @@ class Item(Base):
 
     submitter = relationship("User", foreign_keys=[submitter_id], back_populates="items")
     editor = relationship("User", foreign_keys=[last_edited_by])
-    tags = relationship("Tag", secondary=item_tags, back_populates="items")
+    item_tags    = relationship("ItemTag", back_populates="item", cascade="all, delete-orphan")
+    tags         = relationship("Tag", secondary="item_tags", viewonly=True,
+                               overlaps="item_tags,item")
     votes = relationship("Vote", back_populates="item", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="item", cascade="all, delete-orphan")
     team_items = relationship("TeamItem", back_populates="item", cascade="all, delete-orphan")
@@ -113,6 +138,12 @@ class Item(Base):
     @property
     def comment_count(self):
         return len(self.comments)
+
+    @property
+    def display_tags(self):
+        """Top 5 tags by vote_count for feed display."""
+        sorted_its = sorted(self.item_tags, key=lambda x: x.vote_count, reverse=True)
+        return [it.tag for it in sorted_its[:5]]
 
     @property
     def domain(self):

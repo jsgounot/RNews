@@ -74,7 +74,7 @@
 
   {# Col 6: tags #}
   <td class="col-tags">
-    {% for tag in item.tags %}
+    {% for tag in item.display_tags %}
       <a
         href="{% if team %}/teams/{{ team.slug }}?tag={{ tag.slug }}{% else %}/tag/{{ tag.slug }}{% endif %}"
         class="tag-chip"

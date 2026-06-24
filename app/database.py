@@ -37,19 +37,20 @@ BOT_EMAIL = "robot@rnews.internal"
 
 def get_or_create_bot_user() -> int:
     """Return the bot user's id, creating the account if it doesn't exist yet."""
-    import secrets as _secrets
-    from app.auth import hash_password
-
     db = SessionLocal()
     try:
         from app.models import User
         bot = db.query(User).filter(User.username == BOT_USERNAME).first()
         if bot:
             return bot.id
+        # Use bcrypt directly to avoid passlib's wrap-bug test failing on bcrypt >= 4.0.
+        # The bot never logs in so the actual password is irrelevant.
+        import bcrypt as _bcrypt
+        hashed = _bcrypt.hashpw(b"", _bcrypt.gensalt()).decode()
         bot = User(
             email=BOT_EMAIL,
             username=BOT_USERNAME,
-            hashed_password=hash_password(_secrets.token_hex(32)),
+            hashed_password=hashed,
             is_active=True,
             is_superadmin=False,
         )
@@ -90,6 +91,7 @@ def _migrate():
             "ALTER TABLE items ADD COLUMN auto_ingested INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE items ADD COLUMN auto_ingested BOOLEAN NOT NULL DEFAULT FALSE",
         ),
+        "ALTER TABLE item_tags ADD COLUMN vote_count INTEGER NOT NULL DEFAULT 10",
     ]
 
     with engine.connect() as conn:

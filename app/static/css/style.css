@@ -789,6 +789,65 @@ footer {
 .tag-heading h2 { font-size: 1.05rem; font-weight: 500; }
 .mode-toggle { display: flex; gap: 4px; }
 
+/* ── Tag voting (item page) ──────────────────────────────────────────────── */
+.tag-vote-wrap { display: inline-flex; align-items: center; gap: 1px; }
+
+.tag-vote-btn {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 400;
+  padding: 0;
+  color: var(--text-muted);
+  transition: max-width 0.15s ease, opacity 0.15s ease, padding 0.15s ease;
+  line-height: 1;
+}
+.tag-vote-wrap:hover .tag-vote-btn {
+  max-width: 18px;
+  opacity: 1;
+  padding: 0 3px;
+}
+.tag-vote-btn.active { font-weight: 700; color: var(--accent); }
+.tag-vote-btn:hover  { color: var(--accent); }
+
+.item-tags-main   { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
+.item-tags-pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  width: 100%;
+}
+.pending-label { font-size: 0.73rem; color: var(--text-light); margin-right: 2px; }
+.tag-chip-pending { opacity: 0.65; }
+
+/* ── Tag suggestion (item page) ──────────────────────────────────────────── */
+.tag-suggest-wrap  { display: flex; align-items: center; gap: 6px; margin-top: 5px; width: 100%; }
+.tag-suggest-toggle {
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  padding: 2px 6px;
+}
+.tag-suggest-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.tag-suggest-form  { display: inline-flex; align-items: center; gap: 4px; }
+.tag-suggest-input {
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  width: 120px;
+}
+.tag-suggest-status { font-size: 0.73rem; color: var(--text-muted); }
+
 /* ── Utility ──────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
 
