@@ -158,6 +158,81 @@ class Item(Base):
             return None
 
 
+# ── Automated ingest tables ───────────────────────────────────────────────────
+
+class ItemAbstract(Base):
+    """Abstract text for auto-ingested papers (separate from items — not permanent)."""
+    __tablename__ = "item_abstracts"
+
+    item_id    = Column(Integer, ForeignKey("items.id"), primary_key=True)
+    abstract   = Column(Text, nullable=False)
+    stored_at  = Column(DateTime, default=utcnow)
+
+    item = relationship("Item")
+
+
+class TagMapping(Base):
+    """Raw-tag → clean-tag dictionary built by cron pass-2 runs."""
+    __tablename__ = "tag_mappings"
+
+    raw_tag    = Column(String(128), primary_key=True)
+    clean_tag  = Column(String(128), nullable=True)   # NULL = discard this tag
+    updated_at = Column(DateTime, default=utcnow)
+
+
+class IngestBatch(Base):
+    """A Claude Batch API job submitted by the cron (one per part-A run)."""
+    __tablename__ = "ingest_batches"
+
+    id               = Column(Integer, primary_key=True)
+    claude_batch_id  = Column(String(128), unique=True, nullable=False)
+    submitted_at     = Column(DateTime, default=utcnow)
+    n_submitted      = Column(Integer, nullable=False, default=0)
+    status           = Column(String(16), nullable=False, default="pending")  # pending/retrieved/failed
+    retrieved_at     = Column(DateTime, nullable=True)
+
+    pending_papers = relationship("IngestPendingPaper", back_populates="batch",
+                                  cascade="all, delete-orphan")
+
+
+class IngestPendingPaper(Base):
+    """Papers fetched from PubMed that are awaiting Claude batch results."""
+    __tablename__ = "ingest_pending_papers"
+
+    id          = Column(Integer, primary_key=True)
+    batch_id    = Column(Integer, ForeignKey("ingest_batches.id"), nullable=False)
+    pmid        = Column(String(32), nullable=False)
+    paper_json  = Column(Text, nullable=False)   # full PubMed metadata as JSON
+    abstract    = Column(Text, nullable=False, default="")
+
+    __table_args__ = (UniqueConstraint("batch_id", "pmid"),)
+
+    batch = relationship("IngestBatch", back_populates="pending_papers")
+
+
+class IngestReport(Base):
+    """One row per cron run — accessible via the admin panel."""
+    __tablename__ = "ingest_reports"
+
+    id      = Column(Integer, primary_key=True)
+    run_at  = Column(DateTime, default=utcnow, index=True)
+
+    # Part-A stats
+    papers_found           = Column(Integer, default=0)
+    papers_skipped_dup     = Column(Integer, default=0)
+    papers_sent            = Column(Integer, default=0)
+    claude_batch_submitted = Column(String(128), nullable=True)
+
+    # Part-B stats
+    batches_checked                 = Column(Integer, default=0)
+    papers_retrieved                = Column(Integer, default=0)
+    new_tags                        = Column(Integer, default=0)
+    papers_added                    = Column(Integer, default=0)
+    papers_discarded_user_submitted = Column(Integer, default=0)
+
+    notes = Column(Text, nullable=True)
+
+
 class Vote(Base):
     __tablename__ = "votes"
 

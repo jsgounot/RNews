@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Admin — Ingest Reports{% endblock %}
+
+{% block content %}
+<div class="page-section">
+  <h2>Cron ingest reports</h2>
+  <p style="margin-bottom:1.5rem">
+    Last 50 runs, newest first.
+    <a href="/admin/ingest" style="margin-left:1rem">← Bulk ingest</a>
+  </p>
+
+  {% if not reports %}
+  <div class="empty-state">No cron runs recorded yet.</div>
+  {% else %}
+  <table class="items-table" style="font-size:.85rem">
+    <thead>
+      <tr>
+        <th>Run at (UTC)</th>
+        <th title="Papers found in PubMed 48 h window">Found</th>
+        <th title="Already in DB (deduped)">Dup</th>
+        <th title="Sent to Claude batch">Sent</th>
+        <th title="Claude batch ID submitted this run">Batch submitted</th>
+        <th title="Pending batches checked">Checked</th>
+        <th title="Papers retrieved from completed batches">Retrieved</th>
+        <th title="New raw tags sent through pass-2 normalisation">New tags</th>
+        <th title="Items inserted into DB">Added</th>
+        <th title="Discarded: user submitted same paper during batch window">Discarded&nbsp;(user)</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in reports %}
+      <tr>
+        <td style="white-space:nowrap">{{ r.run_at.strftime("%Y-%m-%d %H:%M") if r.run_at else "—" }}</td>
+        <td>{{ r.papers_found }}</td>
+        <td>{{ r.papers_skipped_dup }}</td>
+        <td>{{ r.papers_sent }}</td>
+        <td style="font-family:monospace;font-size:.75rem">
+          {% if r.claude_batch_submitted %}
+            {{ r.claude_batch_submitted }}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ r.batches_checked }}</td>
+        <td>{{ r.papers_retrieved }}</td>
+        <td>{{ r.new_tags }}</td>
+        <td><strong>{{ r.papers_added }}</strong></td>
+        <td>{{ r.papers_discarded_user_submitted }}</td>
+        <td style="color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+            title="{{ r.notes or '' }}">
+          {{ r.notes or "" }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

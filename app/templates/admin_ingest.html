@@ -4,6 +4,11 @@
 {% block content %}
 <div class="page-section">
   <h2>Bulk ingest tagged papers</h2>
+  <p style="margin-bottom:1rem">
+    <a href="/admin/ingest/reports">View cron ingest reports →</a>
+    &nbsp;|&nbsp;
+    <a href="/admin/tag-mappings">Seed tag mappings →</a>
+  </p>
   <p>Upload a JSON array of papers (e.g. <code>tags.json</code> from the tagger pipeline).
      Papers with errors, missing required fields, or unknown journals are skipped.
      Duplicates (matched by DOI URL or display URL) are also skipped.</p>

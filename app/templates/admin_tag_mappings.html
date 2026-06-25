@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Admin — Tag Mappings{% endblock %}
+
+{% block content %}
+<div class="page-section">
+  <h2>Seed tag mappings</h2>
+  <p>
+    Upload a <code>tag_mapping.json</code> file (format: <code>{"raw_tag": "clean_tag", ...}</code>,
+    <code>null</code> values are accepted to mark a raw tag as discarded).
+    Existing entries are overwritten; new entries are inserted.
+  </p>
+  <p style="margin-bottom:1rem">
+    <a href="/admin/ingest">← Bulk ingest</a>
+  </p>
+
+  <form id="mapping-form" method="post" enctype="multipart/form-data" action="/admin/tag-mappings">
+    <div style="margin-bottom:1rem">
+      <label for="file"><strong>JSON file:</strong></label><br/>
+      <input type="file" name="file" id="file" accept=".json" required style="margin-top:.4rem"/>
+    </div>
+    <button type="submit" class="btn btn-primary" id="submit-btn">Upload</button>
+  </form>
+
+  <pre id="log" style="margin-top:1.5rem;background:#111;color:#cfc;padding:1rem;border-radius:6px;
+       max-height:60vh;overflow-y:auto;font-size:.8rem;display:none"></pre>
+</div>
+
+<script>
+document.getElementById("mapping-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById("submit-btn");
+  const log = document.getElementById("log");
+  btn.disabled = true;
+  btn.textContent = "Uploading…";
+  log.style.display = "block";
+  log.textContent = "";
+
+  const formData = new FormData(this);
+  const resp = await fetch("/admin/tag-mappings", { method: "POST", body: formData });
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    log.textContent += decoder.decode(value, { stream: true });
+    log.scrollTop = log.scrollHeight;
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Upload";
+});
+</script>
+{% endblock %}

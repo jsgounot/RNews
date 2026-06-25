@@ -23,6 +23,14 @@ from app.database import get_db, init_db
 from app.models import (
     Comment, CommentVote, Item, ItemTag, ItemTagVote, Tag, User, Vote,
     SavedTag, Team, TeamMember, TeamItem, FavoriteItem,
+    IngestReport,
+)
+from app.ingest_utils import (
+    normalize_doi_url,
+    get_or_create_tag,
+    best_pub_date as _best_pub_date,
+    JOURNAL_INDEX as _JOURNAL_INDEX,
+    tag_vote_count,
 )
 from app.services.metadata import extract_metadata, is_scientific_url
 
@@ -105,18 +113,6 @@ templates.env.globals["static_v"] = _STATIC_VERSION
 
 # ── Helper functions ──────────────────────────────────────────────────────────
 
-def get_or_create_tag(db: Session, name: str) -> Tag:
-    name = name.strip().lower()
-    slug = slugify(name)
-    tag = db.query(Tag).filter(Tag.slug == slug).first()
-    if not tag:
-        tag = Tag(name=name, slug=slug)
-        db.add(tag)
-        db.commit()
-        db.refresh(tag)
-    return tag
-
-
 def _edit_distance(a: str, b: str) -> int:
     """Standard dynamic-programming Levenshtein distance."""
     if a == b:
@@ -130,37 +126,6 @@ def _edit_distance(a: str, b: str) -> int:
             curr.append(min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + (ca != cb)))
         prev = curr
     return prev[-1]
-
-
-def normalize_doi_url(url: str) -> str:
-    """Normalize any DOI form to https://doi.org/10.xxx.
-
-    Accepts:
-      - bare DOI:           10.1234/something
-      - http/https doi.org: http://doi.org/10.xxx  or  https://doi.org/10.xxx
-      - dx.doi.org variant: https://dx.doi.org/10.xxx
-    Returns the input unchanged if it doesn't look like a DOI.
-    """
-    if not url:
-        return url
-    stripped = url.strip()
-    lower = stripped.lower()
-    # Already canonical
-    if lower.startswith("https://doi.org/10."):
-        return stripped
-    # http → https, dx.doi.org → doi.org
-    for prefix in ("http://dx.doi.org/", "https://dx.doi.org/",
-                   "http://doi.org/", "https://doi.org/"):
-        if lower.startswith(prefix):
-            path = stripped[len(prefix):]
-            return f"https://doi.org/{path}"
-    # doi: prefix (e.g. "doi:10.1038/xxx")
-    if lower.startswith("doi:"):
-        return f"https://doi.org/{stripped[4:]}"
-    # Bare DOI: starts with "10."
-    if lower.startswith("10."):
-        return f"https://doi.org/{stripped}"
-    return stripped
 
 
 async def _resolve_display_url(url: str) -> Optional[str]:
@@ -2029,71 +1994,7 @@ def forgot_password_submit(
 # ── Admin: bulk ingest ────────────────────────────────────────────────────────
 
 import json as _json
-import re as _re
-from datetime import date as _date
 from app.database import get_or_create_bot_user
-
-# Build lookup: abbrev (lower) -> display name, and pubmed name (lower) -> display name
-def _build_journal_index() -> dict:
-    import json as _j
-    from pathlib import Path as _P
-    path = _P(__file__).parent.parent / "journals.json"
-    try:
-        entries = _j.loads(path.read_text())
-    except Exception:
-        return {}
-    idx = {}
-    for e in entries:
-        display = e["name"]
-        if e.get("abbrev"):
-            idx[e["abbrev"].lower()] = display
-        idx[e["pubmed"].lower()] = display
-    return idx
-
-_JOURNAL_INDEX: dict = _build_journal_index()
-
-
-def _parse_pub_date(raw: str) -> Optional[_date]:
-    """Parse PubMed pub_date strings like '2026 Jun 9', '2026 Feb', '2026 Jan'."""
-    if not raw:
-        return None
-    raw = raw.strip()
-    for fmt in ("%Y %b %d", "%Y %b", "%Y%m%d", "%Y-%m-%d", "%Y-%m", "%Y"):
-        try:
-            return datetime.strptime(raw, fmt).date()
-        except ValueError:
-            continue
-    # Try stripping a trailing day if month-only parse fails after removing suffix
-    m = _re.match(r"^(\d{4})\s+([A-Za-z]+)", raw)
-    if m:
-        try:
-            return datetime.strptime(f"{m.group(1)} {m.group(2)}", "%Y %b").date()
-        except ValueError:
-            pass
-    return None
-
-
-def _best_pub_date(paper: dict) -> Optional[_date]:
-    """Return the best available publication date for a paper.
-
-    Prefers pub_date unless it is a Dec 31 placeholder or in the future,
-    in which case falls back to epub_date, then gives up (caller uses utcnow).
-    """
-    today = datetime.now(timezone.utc).date()
-
-    def _is_usable(d: Optional[_date]) -> bool:
-        return d is not None and d <= today and not (d.month == 12 and d.day == 31)
-
-    dp = _parse_pub_date(paper.get("pub_date", ""))
-    if _is_usable(dp):
-        return dp
-
-    dep = _parse_pub_date(paper.get("epub_date", ""))
-    if _is_usable(dep):
-        return dep
-
-    return None
-
 
 REQUIRED_INGEST_FIELDS = ("doi", "title", "journal", "pub_date", "authors", "tags")
 
@@ -2154,7 +2055,7 @@ def _ingest_papers(papers: list, db: Session, update_existing: bool = False):
         first_author = authors[0] if authors else None
         last_author = authors[-1] if len(authors) > 1 else None
         journal_display = _JOURNAL_INDEX[paper["journal"].lower()]
-        tag_names = [t["tag"].strip().lower() for t in paper["tags"] if t.get("tag")][:5]
+        tag_dicts = [t for t in paper["tags"] if t.get("tag")][:5]
 
         if is_dup:
             if not update_existing:
@@ -2185,8 +2086,10 @@ def _ingest_papers(papers: list, db: Session, update_existing: bool = False):
                 existing.display_url = display_url
             db.query(ItemTag).filter(ItemTag.item_id == existing.id).delete(synchronize_session=False)
             db.flush()
-            for name in tag_names:
-                db.add(ItemTag(item_id=existing.id, tag_id=get_or_create_tag(db, name).id, vote_count=10))
+            for td in tag_dicts:
+                name = td["tag"].strip().lower()
+                db.add(ItemTag(item_id=existing.id, tag_id=get_or_create_tag(db, name).id,
+                               vote_count=tag_vote_count(td)))
             db.commit()
 
             updated += 1
@@ -2208,8 +2111,9 @@ def _ingest_papers(papers: list, db: Session, update_existing: bool = False):
             created_at=created_at,
             auto_ingested=True,
         )
-        for name in tag_names:
-            item.item_tags.append(ItemTag(tag=get_or_create_tag(db, name), vote_count=10))
+        for td in tag_dicts:
+            name = td["tag"].strip().lower()
+            item.item_tags.append(ItemTag(tag=get_or_create_tag(db, name), vote_count=tag_vote_count(td)))
 
         db.add(item)
         db.commit()
@@ -2271,4 +2175,102 @@ async def admin_ingest(
     return StreamingResponse(
         _ingest_papers(papers, db, update_existing=update_existing),
         media_type="text/plain; charset=utf-8",
+    )
+
+
+# ── Admin: cron ingest reports ────────────────────────────────────────────────
+
+@app.get("/admin/ingest/reports", response_class=HTMLResponse)
+def admin_ingest_reports(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user or not user.is_superadmin:
+        raise HTTPException(status_code=403, detail="Superadmin only")
+    reports = (
+        db.query(IngestReport)
+        .order_by(IngestReport.run_at.desc())
+        .limit(50)
+        .all()
+    )
+    return templates.TemplateResponse(
+        request, "admin_ingest_reports.html", {"user": user, "reports": reports}
+    )
+
+
+# ── Admin: tag-mapping seed ───────────────────────────────────────────────────
+
+@app.get("/admin/tag-mappings", response_class=HTMLResponse)
+def admin_tag_mappings_page(
+    request: Request,
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user or not user.is_superadmin:
+        raise HTTPException(status_code=403, detail="Superadmin only")
+    return templates.TemplateResponse(request, "admin_tag_mappings.html", {"user": user})
+
+
+@app.post("/admin/tag-mappings")
+async def admin_tag_mappings_upload(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user or not user.is_superadmin:
+        raise HTTPException(status_code=403, detail="Superadmin only")
+
+    form = await request.form()
+    file = form.get("file")
+    if not file:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+
+    raw = await file.read()
+    try:
+        mapping = _json.loads(raw)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    if not isinstance(mapping, dict):
+        raise HTTPException(status_code=400, detail="Expected a JSON object {raw_tag: clean_tag}")
+
+    return StreamingResponse(
+        _seed_tag_mappings(mapping, db),
+        media_type="text/plain; charset=utf-8",
+    )
+
+
+def _seed_tag_mappings(mapping: dict, db: Session):
+    from app.models import TagMapping
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    inserted = updated = skipped = 0
+    total = len(mapping)
+
+    for i, (raw, clean) in enumerate(mapping.items(), 1):
+        raw = raw.strip().lower()
+        if not raw:
+            skipped += 1
+            continue
+        clean = clean.strip().lower() if isinstance(clean, str) else None
+
+        existing = db.query(TagMapping).filter(TagMapping.raw_tag == raw).first()
+        if existing:
+            existing.clean_tag = clean
+            existing.updated_at = now
+            updated += 1
+        else:
+            db.add(TagMapping(raw_tag=raw, clean_tag=clean, updated_at=now))
+            inserted += 1
+
+        if i % 20 == 0:
+            db.commit()
+            yield f"[{i}/{total}] processed…\n"
+
+    db.commit()
+    yield (
+        f"\n--- Done ---\n"
+        f"Inserted: {inserted}\n"
+        f"Updated:  {updated}\n"
+        f"Skipped:  {skipped}\n"
     )
