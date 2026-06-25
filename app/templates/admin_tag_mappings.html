@@ -18,6 +18,14 @@
       <label for="file"><strong>JSON file:</strong></label><br/>
       <input type="file" name="file" id="file" accept=".json" required style="margin-top:.4rem"/>
     </div>
+    <div style="margin-bottom:1rem">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" name="apply_to_existing" value="on"/>
+        <span>Apply mapping to existing tags in the database
+          <span style="color:var(--text-muted);font-size:.85rem">(reassigns item-tag links, removes discarded tags)</span>
+        </span>
+      </label>
+    </div>
     <button type="submit" class="btn btn-primary" id="submit-btn">Upload</button>
   </form>
 

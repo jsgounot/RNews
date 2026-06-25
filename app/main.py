@@ -2225,6 +2225,8 @@ async def admin_tag_mappings_upload(
     if not file:
         raise HTTPException(status_code=400, detail="No file uploaded")
 
+    apply_to_existing = form.get("apply_to_existing") == "on"
+
     raw = await file.read()
     try:
         mapping = _json.loads(raw)
@@ -2234,9 +2236,103 @@ async def admin_tag_mappings_upload(
     if not isinstance(mapping, dict):
         raise HTTPException(status_code=400, detail="Expected a JSON object {raw_tag: clean_tag}")
 
+    def _stream():
+        yield from _seed_tag_mappings(mapping, db)
+        if apply_to_existing:
+            yield "\n=== Applying mapping to existing database tags ===\n"
+            yield from _apply_mapping_to_existing(mapping, db)
+
     return StreamingResponse(
-        _seed_tag_mappings(mapping, db),
+        _stream(),
         media_type="text/plain; charset=utf-8",
+    )
+
+
+def _apply_mapping_to_existing(mapping: dict, db: Session):
+    from app.models import Tag, ItemTag, ItemTagVote
+    from app.ingest_utils import get_or_create_tag
+
+    remappings = {}
+    discards = []
+    for raw, clean in mapping.items():
+        raw = raw.strip().lower()
+        if not raw:
+            continue
+        if clean is None:
+            discards.append(raw)
+        elif clean.strip().lower() != raw:
+            remappings[raw] = clean.strip().lower()
+
+    if not remappings and not discards:
+        yield "All entries are identity mappings — nothing to apply.\n"
+        return
+
+    yield f"{len(remappings)} remappings, {len(discards)} discards to apply…\n"
+
+    merged = tags_deleted = item_tags_discarded = 0
+
+    for i, (raw, clean) in enumerate(remappings.items(), 1):
+        old_tag = db.query(Tag).filter(Tag.name == raw).first()
+        if not old_tag:
+            continue
+
+        new_tag = get_or_create_tag(db, clean)
+        db.flush()
+
+        # Delete votes for old tag (stale after remapping)
+        db.query(ItemTagVote).filter(
+            ItemTagVote.tag_id == old_tag.id
+        ).delete(synchronize_session=False)
+
+        # Snapshot before bulk-deleting
+        old_rows = [(r.item_id, r.vote_count) for r in
+                    db.query(ItemTag).filter(ItemTag.tag_id == old_tag.id).all()]
+
+        db.query(ItemTag).filter(
+            ItemTag.tag_id == old_tag.id
+        ).delete(synchronize_session=False)
+        db.flush()
+
+        for item_id, vote_count in old_rows:
+            existing_new = db.query(ItemTag).filter(
+                ItemTag.item_id == item_id,
+                ItemTag.tag_id == new_tag.id,
+            ).first()
+            if existing_new:
+                existing_new.vote_count = max(existing_new.vote_count, vote_count)
+            else:
+                db.add(ItemTag(item_id=item_id, tag_id=new_tag.id, vote_count=vote_count))
+
+        db.flush()
+        db.delete(old_tag)
+        db.flush()
+        merged += len(old_rows)
+        tags_deleted += 1
+
+        if i % 20 == 0:
+            db.commit()
+            yield f"  [{i}/{len(remappings)}] remappings done…\n"
+
+    db.commit()
+
+    for raw in discards:
+        old_tag = db.query(Tag).filter(Tag.name == raw).first()
+        if not old_tag:
+            continue
+        count = db.query(ItemTag).filter(ItemTag.tag_id == old_tag.id).count()
+        db.query(ItemTagVote).filter(
+            ItemTagVote.tag_id == old_tag.id
+        ).delete(synchronize_session=False)
+        db.delete(old_tag)  # cascade removes ItemTags
+        item_tags_discarded += count
+        tags_deleted += 1
+
+    db.commit()
+    yield (
+        f"\n--- Apply done ---\n"
+        f"Item-tag links reassigned: {merged}\n"
+        f"Item-tag links discarded:  {item_tags_discarded}\n"
+        f"Tags removed:              {tags_deleted}\n"
     )
 
 
