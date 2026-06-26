@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Journals — RNews{% endblock %}
+
+{% block content %}
+<div class="page-section">
+  <h2>Monitored journals</h2>
+  <p style="margin-bottom:1.5rem;color:var(--text-muted)">
+    {{ journals|length }} journals are automatically monitored for new papers via PubMed.
+  </p>
+
+  <ul style="columns:2;column-gap:2rem;list-style:none;padding:0;margin:0">
+    {% for j in journals %}
+    <li style="margin-bottom:.4rem">{{ j.name }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

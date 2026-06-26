@@ -58,6 +58,16 @@
   </section>
 
   <section>
+    <h3>Automatic ingestion</h3>
+    <p>
+      New papers from a curated list of <a href="/journals">{{ journals|length if journals is defined else "" }} monitored journals</a>
+      are fetched from PubMed every 12 hours and tagged automatically using Claude.
+      Auto-ingested papers are marked with a <img src="/static/icons/robot.svg" width="14" height="14" alt="robot" style="vertical-align:middle"/> icon
+      and appear alongside user-submitted content.
+    </p>
+  </section>
+
+  <section>
     <h3>Teams</h3>
     <p>
       Teams are private or public spaces where groups of researchers can

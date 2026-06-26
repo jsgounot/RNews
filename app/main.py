@@ -1204,7 +1204,24 @@ def about_page(
     request: Request,
     user: Optional[User] = Depends(get_current_user),
 ):
-    return templates.TemplateResponse(request, "about.html", {"user": user})
+    return templates.TemplateResponse(
+        request, "about.html", {"user": user, "journals": list(set(_JOURNAL_INDEX.values()))}
+    )
+
+
+@app.get("/journals", response_class=HTMLResponse)
+def journals_page(
+    request: Request,
+    user: Optional[User] = Depends(get_current_user),
+):
+    import json
+    from pathlib import Path
+    journals_path = Path(__file__).parent.parent / "journals.json"
+    try:
+        journals = sorted(json.loads(journals_path.read_text()), key=lambda j: j["name"].lower())
+    except Exception:
+        journals = []
+    return templates.TemplateResponse(request, "journals.html", {"user": user, "journals": journals})
 
 
 # ── User page ─────────────────────────────────────────────────────────────────
