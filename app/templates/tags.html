@@ -7,6 +7,8 @@
 
 {# Base URL preserving q and mode for all option links #}
 {% set base %}tags?q={{ tag_slugs }}&mode={{ mode }}{% endset %}
+{% set auto_q = '&show_auto=0' if not show_auto else '' %}
+{% set auto_toggle_q = '&show_auto=0' if show_auto else '' %}
 
 {% block content %}
 <div class="page-index">
@@ -16,22 +18,27 @@
     <div class="period-options">
       <span class="options-label">Top</span>
       {% for d in [1, 2, 3, 7, 14, 30] %}
-        <a href="/{{ base }}&days={{ d }}&limit={{ limit }}&sort={{ sort }}"
+        <a href="/{{ base }}&days={{ d }}&limit={{ limit }}&sort={{ sort }}{{ auto_q }}"
            class="period-btn {% if days == d %}active{% endif %}">{{ d }}d</a>
       {% endfor %}
     </div>
     <div class="limit-options">
       <span class="options-label">Show</span>
       {% for n in [10, 20, 50] %}
-        <a href="/{{ base }}&days={{ days }}&limit={{ n }}&sort={{ sort }}"
+        <a href="/{{ base }}&days={{ days }}&limit={{ n }}&sort={{ sort }}{{ auto_q }}"
            class="period-btn {% if limit == n %}active{% endif %}">{{ n }}</a>
       {% endfor %}
     </div>
     <div class="sort-options">
-      <a href="/{{ base }}&days={{ days }}&limit={{ limit }}&sort=score"
+      <a href="/{{ base }}&days={{ days }}&limit={{ limit }}&sort=score{{ auto_q }}"
          class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
-      <a href="/{{ base }}&days={{ days }}&limit={{ limit }}&sort=time"
+      <a href="/{{ base }}&days={{ days }}&limit={{ limit }}&sort=time{{ auto_q }}"
          class="period-btn {% if sort == 'time' %}active{% endif %}">new</a>
+      <a href="/{{ base }}&days={{ days }}&limit={{ limit }}&sort={{ sort }}{{ auto_toggle_q }}"
+         class="period-btn {% if show_auto %}active{% endif %}"
+         title="{% if show_auto %}Hide auto-ingested items{% else %}Show auto-ingested items{% endif %}">
+        <img src="/static/icons/robot.svg" width="13" height="13" alt="auto" style="vertical-align:middle;opacity:{% if show_auto %}1{% else %}0.4{% endif %}">
+      </a>
     </div>
   </div>
 
@@ -46,10 +53,10 @@
       </h2>
       {% if tags_found | length > 1 %}
       <div class="mode-toggle">
-        <a href="/{{ base | replace('mode=' ~ mode, 'mode=intersection') }}&days={{ days }}&limit={{ limit }}&sort={{ sort }}"
+        <a href="/{{ base | replace('mode=' ~ mode, 'mode=intersection') }}&days={{ days }}&limit={{ limit }}&sort={{ sort }}{{ auto_q }}"
            class="period-btn {% if mode == 'intersection' %}active{% endif %}"
            title="Show items that have ALL selected tags">AND</a>
-        <a href="/{{ base | replace('mode=' ~ mode, 'mode=union') }}&days={{ days }}&limit={{ limit }}&sort={{ sort }}"
+        <a href="/{{ base | replace('mode=' ~ mode, 'mode=union') }}&days={{ days }}&limit={{ limit }}&sort={{ sort }}{{ auto_q }}"
            class="period-btn {% if mode == 'union' %}active{% endif %}"
            title="Show items that have ANY selected tag">OR</a>
       </div>

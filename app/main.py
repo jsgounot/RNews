@@ -212,6 +212,7 @@ def get_items_for_period(
     page: int = 1,
     per_page: int = 50,
     sort: str = "score",
+    show_auto: bool = True,
 ):
     q = db.query(Item).filter(
         Item.created_at >= start, Item.created_at < end, Item.is_team_only == False  # noqa: E712
@@ -219,6 +220,8 @@ def get_items_for_period(
     if tag_slug:
         q = q.join(ItemTag, ItemTag.item_id == Item.id).join(Tag, Tag.id == ItemTag.tag_id).filter(Tag.slug == tag_slug)
     items = q.all()
+    if not show_auto:
+        items = [i for i in items if not i.auto_ingested]
     if sort == "score":
         items.sort(key=lambda i: (-i.score, i.created_at))
     else:
@@ -400,10 +403,13 @@ def homepage(
     days: int = Query(7, ge=1, le=365),
     limit: int = Query(20, ge=5, le=100),
     sort: str = Query("score", pattern="^(score|time)$"),
+    show_auto: bool = Query(True),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ):
     items = get_top_items(db, days=days, limit=limit, sort=sort)
+    if not show_auto:
+        items = [i for i in items if not i.auto_ingested]
     voted = user_voted_items(db, user, items)
     favorited = user_favorited_items(db, user, items)
 
@@ -418,6 +424,7 @@ def homepage(
         "days": days,
         "limit": limit,
         "sort": sort,
+        "show_auto": show_auto,
         "week_days": week_days,
         "page_title": "Top Stories",
         "tag": None,
@@ -432,6 +439,7 @@ def day_view(
     page: int = Query(1, ge=1),
     sort: str = Query("score", pattern="^(score|time)$"),
     tag_slug: Optional[str] = Query(None),
+    show_auto: bool = Query(True),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ):
@@ -445,7 +453,7 @@ def day_view(
     per_page = 50
 
     items, total = get_items_for_period(
-        db, start, end, tag_slug=tag_slug, page=page, per_page=per_page, sort=sort
+        db, start, end, tag_slug=tag_slug, page=page, per_page=per_page, sort=sort, show_auto=show_auto
     )
     voted = user_voted_items(db, user, items)
     favorited = user_favorited_items(db, user, items)
@@ -463,6 +471,7 @@ def day_view(
         "total_pages": total_pages,
         "total": total,
         "sort": sort,
+        "show_auto": show_auto,
         "tag": tag,
         "tag_slug": tag_slug,
     })
@@ -475,6 +484,7 @@ def tag_page(
     days: int = Query(7, ge=1, le=365),
     limit: int = Query(20, ge=5, le=100),
     sort: str = Query("score", pattern="^(score|time)$"),
+    show_auto: bool = Query(True),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ):
@@ -483,6 +493,8 @@ def tag_page(
         raise HTTPException(status_code=404, detail="Tag not found")
 
     items = get_top_items(db, days=days, limit=limit, tag_slug=tag_slug, sort=sort)
+    if not show_auto:
+        items = [i for i in items if not i.auto_ingested]
     voted = user_voted_items(db, user, items)
     favorited = user_favorited_items(db, user, items)
 
@@ -498,6 +510,7 @@ def tag_page(
         "days": days,
         "limit": limit,
         "sort": sort,
+        "show_auto": show_auto,
         "week_days": week_days,
         "page_title": f"#{tag.name}",
         "tag": tag,
@@ -592,6 +605,7 @@ def multi_tag_page(
     days: int = Query(7, ge=1, le=365),
     limit: int = Query(20, ge=5, le=100),
     sort: str = Query("score", pattern="^(score|time)$"),
+    show_auto: bool = Query(True),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ):
@@ -616,6 +630,8 @@ def multi_tag_page(
             for tag in tags_found:
                 base_q = base_q.filter(Item.tags.any(Tag.id == tag.id))
         items = _sort_items(base_q.all(), sort)[:limit]
+        if not show_auto:
+            items = [i for i in items if not i.auto_ingested]
 
     voted = user_voted_items(db, user, items)
     favorited = user_favorited_items(db, user, items)
@@ -629,6 +645,7 @@ def multi_tag_page(
         "days": days,
         "limit": limit,
         "sort": sort,
+        "show_auto": show_auto,
         "items": items,
         "voted": voted,
         "favorited": favorited,
@@ -644,6 +661,7 @@ def search(
     sort: str = Query("score"),
     days: Optional[int] = Query(None),
     page: int = Query(1, ge=1),
+    show_auto: bool = Query(True),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ):
@@ -682,6 +700,8 @@ def search(
         raw_items.sort(key=lambda i: (-i.score, i.created_at))
 
     all_items, item_source_team = _search_filter_items(raw_items, user)
+    if not show_auto:
+        all_items = [i for i in all_items if not i.auto_ingested]
 
     total = len(all_items)
     total_pages = max(1, math.ceil(total / PER_PAGE))
@@ -700,6 +720,7 @@ def search(
         "total": total,
         "total_pages": total_pages,
         "per_page": PER_PAGE,
+        "show_auto": show_auto,
         "items": items,
         "item_source_team": item_source_team,
         "voted": voted,
@@ -1229,6 +1250,8 @@ def user_page(
     tags: list[str] = Query(default=[]),
     mode: str = Query("or", pattern="^(and|or)$"),
     sort: str = Query("score", pattern="^(score|time)$"),
+    page: int = Query(1, ge=1),
+    show_auto: bool = Query(True),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
@@ -1241,10 +1264,24 @@ def user_page(
     saved_tags = [st.tag for st in profile.saved_tags]
     active_tag_slugs = [s for s in tags if s]
 
+    per_page = 50
+    total_pages = 1
+    total = 0
+
     if view == "favorites":
-        items = get_user_favorites(db, profile, sort=sort)
+        all_items = get_user_favorites(db, profile, sort=sort)
+        if not show_auto:
+            all_items = [i for i in all_items if not i.auto_ingested]
+        total = len(all_items)
+        total_pages = max(1, math.ceil(total / per_page))
+        page = max(1, min(page, total_pages))
+        items = all_items[(page - 1) * per_page: page * per_page]
     else:
         items = get_user_feed_items(db, profile, tag_slugs=active_tag_slugs, mode=mode, sort=sort)
+        if not show_auto:
+            items = [i for i in items if not i.auto_ingested]
+        total = len(items)
+        page = 1
 
     voted = user_voted_items(db, current_user, items)
     favorited = user_favorited_items(db, current_user, items)
@@ -1269,8 +1306,12 @@ def user_page(
         "mode": mode,
         "sort": sort,
         "view": view,
+        "show_auto": show_auto,
         "profile_teams": profile_teams,
         "user": current_user,
+        "page": page,
+        "total_pages": total_pages,
+        "total": total,
     })
 
 
@@ -1451,6 +1492,7 @@ def team_page(
     limit: int = Query(20, ge=5, le=100),
     sort: str = Query("time", pattern="^(score|time)$"),  # default: newest first
     tag: Optional[str] = Query(None),
+    show_auto: bool = Query(True),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ):
@@ -1466,6 +1508,8 @@ def team_page(
 
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
     items = [i for i in items if i.created_at >= cutoff]
+    if not show_auto:
+        items = [i for i in items if not i.auto_ingested]
     items = _sort_items(items, sort)[:limit]
 
     voted = user_voted_items(db, user, items)
@@ -1490,6 +1534,7 @@ def team_page(
         "days": days,
         "limit": limit,
         "sort": sort,
+        "show_auto": show_auto,
         "week_days": week_days,
         "team_tags": list(team_tags.values()),
         "active_tag": tag,
@@ -1507,6 +1552,7 @@ def team_day_view(
     page: int = Query(1, ge=1),
     sort: str = Query("score", pattern="^(score|time)$"),
     tag: Optional[str] = Query(None),
+    show_auto: bool = Query(True),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ):
@@ -1529,6 +1575,8 @@ def team_day_view(
         Item.created_at >= start, Item.created_at < end
     ).all()
 
+    if not show_auto:
+        items = [i for i in items if not i.auto_ingested]
     if sort == "score":
         items.sort(key=lambda i: (-i.score, i.created_at))
     else:
@@ -1544,7 +1592,7 @@ def team_day_view(
         "items": items, "voted": voted, "user": user,
         "date": day, "date_str": date_str,
         "page": page, "total_pages": total_pages, "total": total,
-        "sort": sort, "tag": None, "tag_slug": None,
+        "sort": sort, "show_auto": show_auto, "tag": None, "tag_slug": None,
         "team": team,
     })
 

@@ -47,6 +47,7 @@
     <input type="hidden" name="view" value="feed">
     <input type="hidden" name="sort" id="sort-input" value="{{ sort }}">
     <input type="hidden" name="mode" id="mode-input" value="{{ mode }}">
+    <input type="hidden" name="show_auto" id="show-auto-input" value="{{ '1' if show_auto else '0' }}">
 
     <div class="tag-filter-bar">
       <span class="section-label">Tags:</span>
@@ -85,6 +86,12 @@
         class="period-btn {% if mode == 'and' %}active{% endif %}"
         onclick="toggleMode()">{{ mode | upper }}</button>
       {% endif %}
+      <button type="button"
+        class="period-btn {% if show_auto %}active{% endif %}"
+        onclick="toggleShowAuto()"
+        title="{% if show_auto %}Hide auto-ingested items{% else %}Show auto-ingested items{% endif %}">
+        <img src="/static/icons/robot.svg" width="13" height="13" alt="auto" style="vertical-align:middle;opacity:{% if show_auto %}1{% else %}0.4{% endif %}">
+      </button>
     </div>
   </div>
 
@@ -112,13 +119,20 @@
   ══════════════════════════════════════════════════════════════════════════ #}
   {% else %}
 
+  {% set auto_q = '&show_auto=0' if not show_auto else '' %}
+  {% set auto_toggle_q = '&show_auto=0' if show_auto else '' %}
   <div class="user-items-header">
-    <h3>Favorites <span class="item-count">({{ items | length }})</span></h3>
+    <h3>Favorites <span class="item-count">({{ total }})</span></h3>
     <div class="sort-options">
-      <a href="{{ base }}?view=favorites&sort=score"
+      <a href="{{ base }}?view=favorites&sort=score{{ auto_q }}"
          class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
-      <a href="{{ base }}?view=favorites&sort=time"
+      <a href="{{ base }}?view=favorites&sort=time{{ auto_q }}"
          class="period-btn {% if sort == 'time' %}active{% endif %}">new</a>
+      <a href="{{ base }}?view=favorites&sort={{ sort }}{{ auto_toggle_q }}"
+         class="period-btn {% if show_auto %}active{% endif %}"
+         title="{% if show_auto %}Hide auto-ingested items{% else %}Show auto-ingested items{% endif %}">
+        <img src="/static/icons/robot.svg" width="13" height="13" alt="auto" style="vertical-align:middle;opacity:{% if show_auto %}1{% else %}0.4{% endif %}">
+      </a>
     </div>
   </div>
 
@@ -126,10 +140,23 @@
   <table class="items-table">
     <tbody>
       {% for item in items %}
-        {{ item_row(item, loop.index, voted, current_user, show_day=True, favorited=favorited) }}
+        {{ item_row(item, loop.index + (page-1)*50, voted, current_user, show_day=True, favorited=favorited) }}
       {% endfor %}
     </tbody>
   </table>
+
+  {% if total_pages > 1 %}
+  <div class="pagination">
+    {% if page > 1 %}
+      <a href="{{ base }}?view=favorites&sort={{ sort }}&page={{ page - 1 }}{{ auto_q }}">&laquo; prev</a>
+    {% endif %}
+    <span>Page {{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+      <a href="{{ base }}?view=favorites&sort={{ sort }}&page={{ page + 1 }}{{ auto_q }}">next &raquo;</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% else %}
   <div class="empty-state">No favorites yet — click the ★ on any item to save it here.</div>
   {% endif %}
@@ -149,6 +176,12 @@ function toggleMode() {
   const btn = document.getElementById('mode-toggle-btn');
   inp.value = inp.value === 'or' ? 'and' : 'or';
   btn.textContent = inp.value.toUpperCase();
+  document.getElementById('tag-filter-form').submit();
+}
+
+function toggleShowAuto() {
+  const inp = document.getElementById('show-auto-input');
+  inp.value = inp.value === '1' ? '0' : '1';
   document.getElementById('tag-filter-form').submit();
 }
 

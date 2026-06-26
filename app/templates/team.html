@@ -52,26 +52,33 @@
   {# Period / limit / sort options #}
   {% set tbase = '/teams/' ~ team.slug %}
   {% set tq = '&tag=' ~ active_tag if active_tag else '' %}
+  {% set auto_q = '&show_auto=0' if not show_auto else '' %}
+  {% set auto_toggle_q = '&show_auto=0' if show_auto else '' %}
   <div class="options-bar">
     <div class="period-options">
       <span class="options-label">Top</span>
       {% for d in [1, 2, 3, 7, 14, 30] %}
-        <a href="{{ tbase }}?days={{ d }}&limit={{ limit }}&sort={{ sort }}{{ tq }}"
+        <a href="{{ tbase }}?days={{ d }}&limit={{ limit }}&sort={{ sort }}{{ tq }}{{ auto_q }}"
            class="period-btn {% if days == d %}active{% endif %}">{{ d }}d</a>
       {% endfor %}
     </div>
     <div class="limit-options">
       <span class="options-label">Show</span>
       {% for n in [10, 20, 50] %}
-        <a href="{{ tbase }}?days={{ days }}&limit={{ n }}&sort={{ sort }}{{ tq }}"
+        <a href="{{ tbase }}?days={{ days }}&limit={{ n }}&sort={{ sort }}{{ tq }}{{ auto_q }}"
            class="period-btn {% if limit == n %}active{% endif %}">{{ n }}</a>
       {% endfor %}
     </div>
     <div class="sort-options">
-      <a href="{{ tbase }}?days={{ days }}&limit={{ limit }}&sort=score{{ tq }}"
+      <a href="{{ tbase }}?days={{ days }}&limit={{ limit }}&sort=score{{ tq }}{{ auto_q }}"
          class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
-      <a href="{{ tbase }}?days={{ days }}&limit={{ limit }}&sort=time{{ tq }}"
+      <a href="{{ tbase }}?days={{ days }}&limit={{ limit }}&sort=time{{ tq }}{{ auto_q }}"
          class="period-btn {% if sort == 'time' %}active{% endif %}">new</a>
+      <a href="{{ tbase }}?days={{ days }}&limit={{ limit }}&sort={{ sort }}{{ tq }}{{ auto_toggle_q }}"
+         class="period-btn {% if show_auto %}active{% endif %}"
+         title="{% if show_auto %}Hide auto-ingested items{% else %}Show auto-ingested items{% endif %}">
+        <img src="/static/icons/robot.svg" width="13" height="13" alt="auto" style="vertical-align:middle;opacity:{% if show_auto %}1{% else %}0.4{% endif %}">
+      </a>
     </div>
   </div>
 
@@ -79,7 +86,7 @@
   <div class="day-nav">
     {% for d in week_days %}
       <a
-        href="/teams/{{ team.slug }}/day/{{ d.strftime('%Y-%m-%d') }}{% if active_tag %}?tag={{ active_tag }}{% endif %}"
+        href="/teams/{{ team.slug }}/day/{{ d.strftime('%Y-%m-%d') }}{% if active_tag %}?tag={{ active_tag }}{{ auto_q }}{% elif not show_auto %}?show_auto=0{% endif %}"
         class="day-link {% if d.strftime('%Y-%m-%d') == now().strftime('%Y-%m-%d') %}today{% endif %}"
       >{{ d.strftime('%b %d') }}</a>
     {% endfor %}

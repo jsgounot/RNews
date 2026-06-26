@@ -5,6 +5,8 @@
 
 {# Base URL that preserves q and tag_mode for option links #}
 {% set base %}?q={{ q | urlencode }}&tag_mode={{ 'true' if tag_mode else 'false' }}{% endset %}
+{% set auto_q = '&show_auto=0' if not show_auto else '' %}
+{% set auto_toggle_q = '&show_auto=0' if show_auto else '' %}
 
 {% block content %}
 <div class="page-search">
@@ -23,18 +25,23 @@
   <div class="options-bar">
     <div class="period-options">
       <span class="options-label">Period</span>
-      <a href="{{ base }}&sort={{ sort }}&page=1"
+      <a href="{{ base }}&sort={{ sort }}&page=1{{ auto_q }}"
          class="period-btn {% if not days %}active{% endif %}">all</a>
       {% for d in [7, 30, 90, 365] %}
-        <a href="{{ base }}&sort={{ sort }}&days={{ d }}&page=1"
+        <a href="{{ base }}&sort={{ sort }}&days={{ d }}&page=1{{ auto_q }}"
            class="period-btn {% if days == d %}active{% endif %}">{{ d }}d</a>
       {% endfor %}
     </div>
     <div class="sort-options">
-      <a href="{{ base }}&sort=score{% if days %}&days={{ days }}{% endif %}&page=1"
+      <a href="{{ base }}&sort=score{% if days %}&days={{ days }}{% endif %}&page=1{{ auto_q }}"
          class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
-      <a href="{{ base }}&sort=time{% if days %}&days={{ days }}{% endif %}&page=1"
+      <a href="{{ base }}&sort=time{% if days %}&days={{ days }}{% endif %}&page=1{{ auto_q }}"
          class="period-btn {% if sort == 'time' %}active{% endif %}">new</a>
+      <a href="{{ base }}&sort={{ sort }}{% if days %}&days={{ days }}{% endif %}&page=1{{ auto_toggle_q }}"
+         class="period-btn {% if show_auto %}active{% endif %}"
+         title="{% if show_auto %}Hide auto-ingested items{% else %}Show auto-ingested items{% endif %}">
+        <img src="/static/icons/robot.svg" width="13" height="13" alt="auto" style="vertical-align:middle;opacity:{% if show_auto %}1{% else %}0.4{% endif %}">
+      </a>
     </div>
   </div>
   {% endif %}
@@ -64,7 +71,7 @@
   {# Pagination #}
   {% if total_pages > 1 %}
   <div class="search-pagination">
-    {% set pg_base %}{{ base }}&sort={{ sort }}{% if days %}&days={{ days }}{% endif %}{% endset %}
+    {% set pg_base %}{{ base }}&sort={{ sort }}{% if days %}&days={{ days }}{% endif %}{{ auto_q }}{% endset %}
     {% if page > 1 %}
       <a href="{{ pg_base }}&page={{ page - 1 }}" class="period-btn">← prev</a>
     {% else %}
