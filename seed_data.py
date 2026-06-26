@@ -4,6 +4,8 @@ Run via:  python run.py --seed
 Or:       python seed_data.py
 """
 from datetime import datetime, timedelta, timezone
+import json
+import os
 import random
 
 
@@ -266,6 +268,53 @@ def seed():
                 comment_count += 1
 
     print(f"  Comments: {comment_count}")
+
+    # ── Alice's favorites (60+ items from tags.json) ──────────────────────────
+    from app.models import FavoriteItem
+
+    tags_json_path = os.path.join(os.path.dirname(__file__), "private_local", "tagger", "tags.json")
+    if os.path.exists(tags_json_path):
+        with open(tags_json_path) as f:
+            papers_raw = json.load(f)
+
+        fav_count = 0
+        for entry in papers_raw[:65]:
+            doi = entry.get("doi")
+            if not doi:
+                continue
+            url = f"https://doi.org/{doi}"
+            existing = db.query(Item).filter(Item.url == url).first()
+            if not existing:
+                authors = entry.get("authors") or []
+                item = Item(
+                    url=url,
+                    title=(entry.get("title") or "Untitled").rstrip("."),
+                    item_type="paper",
+                    journal=entry.get("journal"),
+                    first_author=authors[0] if authors else None,
+                    last_author=authors[-1] if len(authors) > 1 else None,
+                    publication_date=entry.get("pub_date"),
+                    submitter_id=alice.id,
+                    auto_ingested=True,
+                    created_at=now - timedelta(days=random.randint(1, 60)),
+                )
+                db.add(item)
+                db.flush()
+                existing = item
+
+            fav = db.query(FavoriteItem).filter(
+                FavoriteItem.user_id == alice.id,
+                FavoriteItem.item_id == existing.id,
+            ).first()
+            if not fav:
+                db.add(FavoriteItem(user_id=alice.id, item_id=existing.id))
+                fav_count += 1
+
+        db.commit()
+        print(f"  Alice favorites added: {fav_count}")
+    else:
+        print("  (tags.json not found — skipping alice favorites)")
+
     print("\nDemo accounts:")
     for email, username, password in users_data:
         print(f"  {username} / {password}  ({email})")
