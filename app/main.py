@@ -254,51 +254,46 @@ def get_top_items(
 def get_user_feed_items(
     db: Session,
     profile: User,
-    tag_slug: Optional[str] = None,
+    tag_slugs: list = None,
+    mode: str = "or",
     sort: str = "score",
 ) -> list:
-    """Items from saved tags (all users) UNION starred items, never lost even if tags change."""
+    """Items from the user's saved tags, with optional multi-tag filter.
+
+    tag_slugs=[]  → show all saved-tag items (no filter)
+    mode="or"     → items matching ANY selected tag
+    mode="and"    → items matching ALL selected tags (one subquery per tag)
+    """
     saved_tag_ids = [st.tag_id for st in profile.saved_tags]
-    favorite_item_ids = {fi.item_id for fi in profile.favorite_items}
-
-    if tag_slug:
-        # Filtered view: only items with that tag
-        items = (
-            db.query(Item)
-            .filter(Item.is_team_only == False)  # noqa: E712
-            .join(ItemTag, ItemTag.item_id == Item.id).join(Tag, Tag.id == ItemTag.tag_id).filter(Tag.slug == tag_slug)
-            .all()
-        )
-    else:
-        # Union: saved-tag items + starred items
-        seen: set = set()
-        items: list = []
-
-        if saved_tag_ids:
-            for item in (
-                db.query(Item)
-                .filter(Item.is_team_only == False,  # noqa: E712
-                        Item.tags.any(Tag.id.in_(saved_tag_ids)))
-                .all()
-            ):
-                if item.id not in seen:
-                    seen.add(item.id)
-                    items.append(item)
-
-        if favorite_item_ids:
-            missing = favorite_item_ids - seen
-            if missing:
-                for item in (
-                    db.query(Item)
-                    .filter(Item.id.in_(missing), Item.is_team_only == False)  # noqa: E712
-                    .all()
-                ):
-                    seen.add(item.id)
-                    items.append(item)
-
-    if not items and not favorite_item_ids and not saved_tag_ids:
+    if not saved_tag_ids or not tag_slugs:
         return []
 
+    if mode == "or":
+        items = (
+            db.query(Item)
+            .filter(Item.is_team_only == False,  # noqa: E712
+                    Item.tags.any(Tag.slug.in_(tag_slugs)))
+            .all()
+        )
+    else:  # "and"
+        q = db.query(Item).filter(Item.is_team_only == False)  # noqa: E712
+        for slug in tag_slugs:
+            q = q.filter(Item.tags.any(Tag.slug == slug))
+        items = q.all()
+
+    return _sort_items(items, sort)
+
+
+def get_user_favorites(db: Session, profile: User, sort: str = "score") -> list:
+    """Items favorited by this user."""
+    favorite_ids = [fi.item_id for fi in profile.favorite_items]
+    if not favorite_ids:
+        return []
+    items = (
+        db.query(Item)
+        .filter(Item.id.in_(favorite_ids), Item.is_team_only == False)  # noqa: E712
+        .all()
+    )
     return _sort_items(items, sort)
 
 
@@ -1230,7 +1225,9 @@ def journals_page(
 def user_page(
     request: Request,
     username: str,
-    tag: Optional[str] = Query(None),
+    view: str = Query("feed", pattern="^(feed|favorites)$"),
+    tags: list[str] = Query(default=[]),
+    mode: str = Query("or", pattern="^(and|or)$"),
     sort: str = Query("score", pattern="^(score|time)$"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
@@ -1238,37 +1235,28 @@ def user_page(
     profile = get_user_by_username(db, username)
     if not profile:
         raise HTTPException(status_code=404, detail="User not found")
+    if not current_user or current_user.id != profile.id:
+        return RedirectResponse("/login" if not current_user else "/", status_code=302)
 
-    # Saved tags for this user
     saved_tags = [st.tag for st in profile.saved_tags]
+    active_tag_slugs = [s for s in tags if s]
 
-    # Items: feed from saved tags (all users), or empty if none saved
-    tag_slug = slugify(tag) if tag else None
-    items = get_user_feed_items(db, profile, tag_slug=tag_slug, sort=sort)
+    if view == "favorites":
+        items = get_user_favorites(db, profile, sort=sort)
+    else:
+        items = get_user_feed_items(db, profile, tag_slugs=active_tag_slugs, mode=mode, sort=sort)
 
     voted = user_voted_items(db, current_user, items)
     favorited = user_favorited_items(db, current_user, items)
 
-    # Tags available for filtering (union of saved tags + all tags on those items)
-    filter_tags: dict = {}
-    for st in profile.saved_tags:
-        filter_tags[st.tag.slug] = st.tag
-    for item in items:
-        for t in item.tags:
-            filter_tags[t.slug] = t
-
-    # Teams visible to the viewer (public, or private ones viewer is a member of)
-    viewer_team_ids = set()
-    if current_user:
-        viewer_team_ids = {
-            tm.team_id for tm in db.query(TeamMember)
-            .filter(TeamMember.user_id == current_user.id).all()
-        }
-    profile_teams = []
-    for tm in profile.team_memberships:
-        team = tm.team
-        if team.is_public or team.id in viewer_team_ids:
-            profile_teams.append(team)
+    viewer_team_ids = {
+        tm.team_id for tm in db.query(TeamMember)
+        .filter(TeamMember.user_id == current_user.id).all()
+    }
+    profile_teams = [
+        tm.team for tm in profile.team_memberships
+        if tm.team.is_public or tm.team.id in viewer_team_ids
+    ]
 
     return templates.TemplateResponse(request, "user.html", {
         "profile": profile,
@@ -1277,9 +1265,10 @@ def user_page(
         "favorited": favorited,
         "current_user": current_user,
         "saved_tags": saved_tags,
-        "filter_tags": list(filter_tags.values()),
-        "active_tag": tag_slug,
+        "active_tag_slugs": set(active_tag_slugs),
+        "mode": mode,
         "sort": sort,
+        "view": view,
         "profile_teams": profile_teams,
         "user": current_user,
     })

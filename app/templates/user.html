@@ -3,25 +3,29 @@
 
 {% block title %}{{ profile.username }} — RNews{% endblock %}
 
-{# Base URL helpers #}
 {% set base = '/user/' ~ profile.username %}
-{% set tag_param = ('&tag=' ~ active_tag) if active_tag else '' %}
 
 {% block content %}
 <div class="page-user">
 
-  {# User header #}
+  {# ── Header ─────────────────────────────────────────────────────────────── #}
   <div class="user-header">
     <div>
       <h2 class="user-name">{{ profile.username }}</h2>
       <span class="user-meta">Member since {{ profile.created_at.strftime('%B %Y') }}</span>
     </div>
-    {% if current_user and current_user.id == profile.id %}
-    <a href="/settings" class="btn-settings">⚙ Settings</a>
-    {% endif %}
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <div class="view-toggle">
+        <a href="{{ base }}?view=feed&sort={{ sort }}"
+           class="period-btn {% if view == 'feed' %}active{% endif %}">Feed</a>
+        <a href="{{ base }}?view=favorites&sort={{ sort }}"
+           class="period-btn {% if view == 'favorites' %}active{% endif %}">Favorites</a>
+      </div>
+      <a href="/settings" class="btn-settings">⚙ Settings</a>
+    </div>
   </div>
 
-  {# My teams row #}
+  {# ── Teams row ───────────────────────────────────────────────────────────── #}
   {% if profile_teams %}
   <div class="user-teams-row">
     <span class="section-label">Teams:</span>
@@ -33,55 +37,54 @@
   </div>
   {% endif %}
 
-  {# Saved tags as filter chips #}
+  {# ══════════════════════════════════════════════════════════════════════════
+     FEED VIEW
+  ══════════════════════════════════════════════════════════════════════════ #}
+  {% if view == 'feed' %}
+
   {% if saved_tags %}
-  <div class="user-saved-tags">
-    <span class="section-label">Saved tags:</span>
-    <a href="{{ base }}" class="tag-chip-filter {% if not active_tag %}active{% endif %}">all</a>
-    {% for tag in saved_tags %}
-      <a
-        href="{{ base }}?tag={{ tag.slug }}&sort={{ sort }}"
-        class="tag-chip {% if active_tag == tag.slug %}tag-chip-active{% endif %}"
-        style="background:{{ tag_color(tag.name) }}"
-      >#{{ tag.name }}</a>
-    {% endfor %}
-  </div>
+  <form id="tag-filter-form" method="get" action="{{ base }}">
+    <input type="hidden" name="view" value="feed">
+    <input type="hidden" name="sort" id="sort-input" value="{{ sort }}">
+    <input type="hidden" name="mode" id="mode-input" value="{{ mode }}">
+
+    <div class="tag-filter-bar">
+      <span class="section-label">Tags:</span>
+      <div class="tag-checkboxes">
+        {% for tag in saved_tags %}
+        <label class="tag-checkbox-wrap">
+          <input
+            type="checkbox"
+            name="tags"
+            value="{{ tag.slug }}"
+            {% if tag.slug in active_tag_slugs %}checked{% endif %}
+            onchange="document.getElementById('tag-filter-form').submit()"
+          >
+          <span class="tag-chip" style="background:{{ tag_color(tag.name) }}">#{{ tag.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+    </div>
+  </form>
   {% endif %}
 
-  {# Additional filter tags from items (tags not already in saved_tags) #}
-  {% set saved_slugs = saved_tags | map(attribute='slug') | list %}
-  {% set extra_tags = filter_tags | selectattr('slug', 'ne', active_tag or '') | list %}
-  {% set extra_tags = extra_tags | rejectattr('slug', 'in', saved_slugs) | list %}
-  {% if extra_tags %}
-  <div class="user-tag-filter">
-    <span class="section-label">Also in feed:</span>
-    {% for tag in extra_tags %}
-      <a
-        href="{{ base }}?tag={{ tag.slug }}&sort={{ sort }}"
-        class="tag-chip {% if active_tag == tag.slug %}tag-chip-active{% endif %}"
-        style="background:{{ tag_color(tag.name) }}"
-      >#{{ tag.name }}</a>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {% if active_tag %}
-  <div style="margin-bottom:8px">
-    <a href="{{ base }}?sort={{ sort }}" class="clear-filter">✕ clear tag filter</a>
-  </div>
-  {% endif %}
-
-  {# Sort toggle + count #}
+  {# Sort + mode + count #}
   <div class="user-items-header">
-    <h3>
-      Feed{% if active_tag %} — #{{ active_tag }}{% endif %}
-      <span class="item-count">({{ items | length }})</span>
-    </h3>
+    <h3>Feed <span class="item-count">({{ items | length }})</span></h3>
     <div class="sort-options">
-      <a href="{{ base }}?sort=score{{ tag_param }}"
-         class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
-      <a href="{{ base }}?sort=time{{ tag_param }}"
-         class="period-btn {% if sort == 'time' %}active{% endif %}">new</a>
+      <button type="button"
+        class="period-btn {% if sort == 'score' %}active{% endif %}"
+        onclick="setSort('score')">top</button>
+      <button type="button"
+        class="period-btn {% if sort == 'time' %}active{% endif %}"
+        onclick="setSort('time')">new</button>
+      {% if saved_tags %}
+      <button type="button"
+        id="mode-toggle-btn"
+        class="period-btn {% if mode == 'and' %}active{% endif %}"
+        onclick="toggleMode()">{{ mode | upper }}</button>
+      {% endif %}
     </div>
   </div>
 
@@ -96,11 +99,58 @@
   {% elif not saved_tags %}
   <div class="empty-state">
     No saved tags yet — save a tag from any
-    <a href="/tag/genomics">tag page</a> to build your feed.
+    <a href="/tags">tag page</a> to build your feed.
   </div>
+  {% elif active_tag_slugs %}
+  <div class="empty-state">No items found for the selected tags.</div>
+  {% elif saved_tags %}
+  <div class="empty-state">Select one or more tags above to load your feed.</div>
+  {% endif %}
+
+  {# ══════════════════════════════════════════════════════════════════════════
+     FAVORITES VIEW
+  ══════════════════════════════════════════════════════════════════════════ #}
   {% else %}
-  <div class="empty-state">No items found for the selected tag.</div>
+
+  <div class="user-items-header">
+    <h3>Favorites <span class="item-count">({{ items | length }})</span></h3>
+    <div class="sort-options">
+      <a href="{{ base }}?view=favorites&sort=score"
+         class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
+      <a href="{{ base }}?view=favorites&sort=time"
+         class="period-btn {% if sort == 'time' %}active{% endif %}">new</a>
+    </div>
+  </div>
+
+  {% if items %}
+  <table class="items-table">
+    <tbody>
+      {% for item in items %}
+        {{ item_row(item, loop.index, voted, current_user, show_day=True, favorited=favorited) }}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">No favorites yet — click the ★ on any item to save it here.</div>
+  {% endif %}
+
   {% endif %}
 
 </div>
+
+<script>
+function setSort(v) {
+  document.getElementById('sort-input').value = v;
+  document.getElementById('tag-filter-form').submit();
+}
+
+function toggleMode() {
+  const inp = document.getElementById('mode-input');
+  const btn = document.getElementById('mode-toggle-btn');
+  inp.value = inp.value === 'or' ? 'and' : 'or';
+  btn.textContent = inp.value.toUpperCase();
+  document.getElementById('tag-filter-form').submit();
+}
+
+</script>
 {% endblock %}
