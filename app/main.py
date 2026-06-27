@@ -109,6 +109,9 @@ _STATIC_VERSION = (
     or datetime.now().strftime("%Y%m%d%H")
 )
 templates.env.globals["static_v"] = _STATIC_VERSION
+templates.env.globals["github_issues_url"] = os.environ.get(
+    "GITHUB_ISSUES_URL", "https://github.com/jsgounot/rnews/issues"
+)
 
 
 # ── Helper functions ──────────────────────────────────────────────────────────

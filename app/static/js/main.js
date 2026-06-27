@@ -1,6 +1,20 @@
 /* ── main.js — voting + comment replies ────────────────────────────────── */
 "use strict";
 
+// ── Beta banner ───────────────────────────────────────────────────────────────
+(function () {
+  const banner = document.getElementById("beta-banner");
+  if (!banner) return;
+  if (localStorage.getItem("beta-banner-dismissed") === "1") {
+    banner.style.display = "none";
+    return;
+  }
+  document.getElementById("beta-banner-close").addEventListener("click", () => {
+    banner.style.display = "none";
+    localStorage.setItem("beta-banner-dismissed", "1");
+  });
+})();
+
 // ── Item voting ──────────────────────────────────────────────────────────────
 document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".vote-btn, .vote-btn-lg");
