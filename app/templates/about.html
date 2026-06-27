@@ -9,9 +9,22 @@
   <section>
     <h3>What is RNews?</h3>
     <p>
-      RNews is a community-driven aggregator for scientific papers and links,
-      built for researchers who want a fast, minimalist way to discover,
-      share, and discuss the literature that matters.
+      RNews is a community-driven aggregator for scientific papers and links, built for 
+      researchers who want a fast, minimalist way to discover, share, and discuss the literature 
+      that matters. In an era of new personalized AI solutions, RNews aims to promote and highlight 
+      research interests and discussions between researchers and enthusiasts.
+    </p>
+    <p>
+      <i>None of us is as smart as all of us.</i>
+    </p>
+  </section>
+
+  <section>
+    <h3>General guidelines</h3>
+    <p>
+      This website is heavily inspired by Hacker News and aims to follow its community standards. 
+      Please refer to <a href="https://news.ycombinator.com/newsguidelines.html" target="_blank" rel="noopener">its guidelines</a> 
+      before posting original submissions or comments.
     </p>
   </section>
 
@@ -61,7 +74,7 @@
     <h3>Automatic ingestion</h3>
     <p>
       New papers from a curated list of <a href="/journals">{{ journals|length if journals is defined else "" }} monitored journals</a>
-      are fetched from PubMed every 12 hours and tagged automatically using Claude.
+      are fetched every 12 hours and tagged automatically.
       Auto-ingested papers are marked with a <img src="/static/icons/robot.svg" width="14" height="14" alt="robot" style="vertical-align:middle"/> icon
       and appear alongside user-submitted content.
     </p>
@@ -73,15 +86,7 @@
       Teams are private or public spaces where groups of researchers can
       curate their own feed. Items submitted directly to a team are
       team-only; items shared from the main feed keep their public presence
-      while also appearing in the team. Roles: <em>admin</em>, <em>contributor</em>, <em>viewer</em>.
-    </p>
-  </section>
-
-  <section>
-    <h3>Voting &amp; comments</h3>
-    <p>
-      Upvote items and comments. Click a title to open the comment thread,
-      where replies are nested Reddit-style and sorted by score.
+      while also appearing in the team.
     </p>
   </section>
 
