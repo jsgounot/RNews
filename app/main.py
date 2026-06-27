@@ -1493,6 +1493,7 @@ def team_page(
     sort: str = Query("time", pattern="^(score|time)$"),  # default: newest first
     tag: Optional[str] = Query(None),
     show_auto: bool = Query(True),
+    q: str = Query(""),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ):
@@ -1510,6 +1511,9 @@ def team_page(
     items = [i for i in items if i.created_at >= cutoff]
     if not show_auto:
         items = [i for i in items if not i.auto_ingested]
+    if q:
+        q_lower = q.lower()
+        items = [i for i in items if q_lower in i.title.lower()]
     items = _sort_items(items, sort)[:limit]
 
     voted = user_voted_items(db, user, items)
@@ -1535,6 +1539,7 @@ def team_page(
         "limit": limit,
         "sort": sort,
         "show_auto": show_auto,
+        "q": q,
         "week_days": week_days,
         "team_tags": list(team_tags.values()),
         "active_tag": tag,
