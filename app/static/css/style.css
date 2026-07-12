@@ -969,6 +969,14 @@ footer {
 .clear-filter { font-size: 0.78rem; color: var(--text-muted); }
 .clear-filter:hover { color: var(--accent); }
 
+.btn-save-defaults {
+  font-size: 0.75rem; padding: 2px 8px; margin-left: 4px;
+  background: none; border: 1px solid #ccc; border-radius: 4px;
+  color: var(--text-muted); cursor: pointer;
+}
+.btn-save-defaults:hover { border-color: var(--accent); color: var(--accent); }
+.btn-save-defaults:disabled { opacity: 0.6; cursor: default; }
+
 .user-items-header { margin: 16px 0 8px; }
 .user-items-header h3 { font-size: 1rem; font-weight: 600; }
 

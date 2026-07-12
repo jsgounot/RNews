@@ -92,6 +92,7 @@ def _migrate():
             "ALTER TABLE items ADD COLUMN auto_ingested BOOLEAN NOT NULL DEFAULT FALSE",
         ),
         "ALTER TABLE item_tags ADD COLUMN vote_count INTEGER NOT NULL DEFAULT 10",
+        "ALTER TABLE users ADD COLUMN feed_default_tags TEXT",
     ]
 
     with engine.connect() as conn:

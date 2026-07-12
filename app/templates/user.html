@@ -48,6 +48,7 @@
     <input type="hidden" name="sort" id="sort-input" value="{{ sort }}">
     <input type="hidden" name="mode" id="mode-input" value="{{ mode }}">
     <input type="hidden" name="show_auto" id="show-auto-input" value="{{ '1' if show_auto else '0' }}">
+    <input type="hidden" name="tags_set" value="1">
 
     <div class="tag-filter-bar">
       <span class="section-label">Tags:</span>
@@ -65,7 +66,7 @@
         </label>
         {% endfor %}
       </div>
-
+      <button type="button" class="btn-save-defaults" id="save-defaults-btn" onclick="saveDefaults()">Save as default</button>
     </div>
   </form>
   {% endif %}
@@ -183,6 +184,23 @@ function toggleShowAuto() {
   const inp = document.getElementById('show-auto-input');
   inp.value = inp.value === '1' ? '0' : '1';
   document.getElementById('tag-filter-form').submit();
+}
+
+async function saveDefaults() {
+  const slugs = [...document.querySelectorAll('input[name="tags"]:checked')].map(cb => cb.value);
+  const btn = document.getElementById('save-defaults-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/user/feed-defaults', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tag_slugs: slugs}),
+    });
+    btn.textContent = res.ok ? 'Saved!' : 'Error';
+  } catch {
+    btn.textContent = 'Error';
+  }
+  setTimeout(() => { btn.textContent = 'Save as default'; btn.disabled = false; }, 2000);
 }
 
 </script>

@@ -1253,6 +1253,7 @@ def user_page(
     username: str,
     view: str = Query("feed", pattern="^(feed|favorites)$"),
     tags: list[str] = Query(default=[]),
+    tags_set: bool = Query(False),
     mode: str = Query("or", pattern="^(and|or)$"),
     sort: str = Query("score", pattern="^(score|time)$"),
     page: int = Query(1, ge=1),
@@ -1267,7 +1268,16 @@ def user_page(
         return RedirectResponse("/login" if not current_user else "/", status_code=302)
 
     saved_tags = [st.tag for st in profile.saved_tags]
-    active_tag_slugs = [s for s in tags if s]
+
+    if tags_set:
+        # Form was submitted — use exactly what the user selected (may be empty)
+        active_tag_slugs = [s for s in tags if s]
+    elif profile.feed_default_tags is not None:
+        # User has saved a custom default
+        active_tag_slugs = [s for s in profile.feed_default_tags.split(",") if s]
+    else:
+        # No default saved yet — check all saved tags
+        active_tag_slugs = [tag.slug for tag in saved_tags]
 
     per_page = 50
     total_pages = 1
@@ -1444,6 +1454,21 @@ async def save_preferences(
 
 
 # ── Team creation ─────────────────────────────────────────────────────────────
+
+@app.post("/api/user/feed-defaults")
+async def save_feed_defaults(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user:
+        return JSONResponse({"error": "Not logged in"}, status_code=401)
+    data = await request.json()
+    tag_slugs = [s for s in data.get("tag_slugs", []) if isinstance(s, str) and s]
+    user.feed_default_tags = ",".join(tag_slugs)
+    db.commit()
+    return JSONResponse({"ok": True})
+
 
 @app.post("/teams/create")
 async def create_team(
