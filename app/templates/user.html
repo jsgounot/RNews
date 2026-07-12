@@ -60,7 +60,7 @@
             name="tags"
             value="{{ tag.slug }}"
             {% if tag.slug in active_tag_slugs %}checked{% endif %}
-            onchange="document.getElementById('tag-filter-form').submit()"
+            onchange="refreshFeed()"
           >
           <span class="tag-chip" style="background:{{ tag_color(tag.name) }}">#{{ tag.name }}</span>
         </label>
@@ -73,7 +73,7 @@
 
   {# Sort + mode + count #}
   <div class="user-items-header">
-    <h3>Feed <span class="item-count">({{ items | length }})</span></h3>
+    <h3>Feed <span class="item-count" id="feed-count">({{ items | length }})</span></h3>
     <div class="sort-options">
       <button type="button"
         class="period-btn {% if sort == 'score' %}active{% endif %}"
@@ -96,24 +96,9 @@
     </div>
   </div>
 
-  {% if items %}
-  <table class="items-table">
-    <tbody>
-      {% for item in items %}
-        {{ item_row(item, loop.index, voted, current_user, show_day=True, favorited=favorited) }}
-      {% endfor %}
-    </tbody>
-  </table>
-  {% elif not saved_tags %}
-  <div class="empty-state">
-    No saved tags yet — save a tag from any
-    <a href="/tags">tag page</a> to build your feed.
+  <div id="feed-items-area">
+    {% include '_user_feed_items.html' %}
   </div>
-  {% elif active_tag_slugs %}
-  <div class="empty-state">No items found for the selected tags.</div>
-  {% elif saved_tags %}
-  <div class="empty-state">Select one or more tags above to load your feed.</div>
-  {% endif %}
 
   {# ══════════════════════════════════════════════════════════════════════════
      FAVORITES VIEW
@@ -167,6 +152,27 @@
 </div>
 
 <script>
+function refreshFeed() {
+  const params = new URLSearchParams();
+  params.set('tags_set', '1');
+  params.set('mode', document.getElementById('mode-input').value);
+  params.set('sort', document.getElementById('sort-input').value);
+  params.set('show_auto', document.getElementById('show-auto-input').value);
+  document.querySelectorAll('input[name="tags"]:checked').forEach(cb => params.append('tags', cb.value));
+
+  const area = document.getElementById('feed-items-area');
+  area.style.opacity = '0.4';
+
+  fetch('/user/{{ profile.username }}/feed-fragment?' + params)
+    .then(r => {
+      const count = r.headers.get('X-Item-Count');
+      if (count !== null) document.getElementById('feed-count').textContent = '(' + count + ')';
+      return r.text();
+    })
+    .then(html => { area.innerHTML = html; area.style.opacity = '1'; })
+    .catch(() => { area.style.opacity = '1'; });
+}
+
 function setSort(v) {
   document.getElementById('sort-input').value = v;
   document.getElementById('tag-filter-form').submit();

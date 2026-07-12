@@ -1330,6 +1330,52 @@ def user_page(
     })
 
 
+# ── User feed fragment (partial render for tag-checkbox AJAX) ─────────────────
+
+@app.get("/user/{username}/feed-fragment", response_class=HTMLResponse)
+def user_feed_fragment(
+    request: Request,
+    username: str,
+    tags: list[str] = Query(default=[]),
+    tags_set: bool = Query(False),
+    mode: str = Query("or", pattern="^(and|or)$"),
+    sort: str = Query("score", pattern="^(score|time)$"),
+    show_auto: bool = Query(True),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    profile = get_user_by_username(db, username)
+    if not profile or not current_user or current_user.id != profile.id:
+        return HTMLResponse("", status_code=403)
+
+    saved_tags = [st.tag for st in profile.saved_tags]
+
+    if tags_set:
+        active_tag_slugs = [s for s in tags if s]
+    elif profile.feed_default_tags is not None:
+        active_tag_slugs = [s for s in profile.feed_default_tags.split(",") if s]
+    else:
+        active_tag_slugs = [tag.slug for tag in saved_tags]
+
+    items = get_user_feed_items(db, profile, tag_slugs=active_tag_slugs, mode=mode, sort=sort)
+    if not show_auto:
+        items = [i for i in items if not i.auto_ingested]
+
+    voted     = user_voted_items(db, current_user, items)
+    favorited = user_favorited_items(db, current_user, items)
+
+    response = templates.TemplateResponse(request, "_user_feed_items.html", {
+        "items": items,
+        "voted": voted,
+        "favorited": favorited,
+        "current_user": current_user,
+        "saved_tags": saved_tags,
+        "active_tag_slugs": set(active_tag_slugs),
+    })
+    response.headers["X-Item-Count"] = str(len(items))
+    return response
+
+
 # ── Settings ──────────────────────────────────────────────────────────────────
 
 @app.get("/settings", response_class=HTMLResponse)
