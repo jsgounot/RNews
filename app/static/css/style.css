@@ -891,6 +891,7 @@ footer {
 }
 .star-btn:hover { color: #f4c430; transform: scale(1.2); }
 .star-btn.starred { color: #f4c430; }
+.item-header-vote .star-btn { font-size: 1.25rem; }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 

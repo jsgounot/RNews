@@ -535,7 +535,8 @@ def item_page(
     comments = db.query(Comment).filter(Comment.item_id == item_id).all()
     tree = build_comment_tree(comments)
     voted_comments = user_voted_comments(db, user, comments)
-    item_voted = item_id in user_voted_items(db, user, [item]) if user else False
+    item_voted     = item_id in user_voted_items(db, user, [item]) if user else False
+    item_favorited = item_id in user_favorited_items(db, user, [item]) if user else False
 
     # Tag votes for the current user on this item
     user_tag_votes = {}
@@ -569,6 +570,7 @@ def item_page(
         "user_tag_votes": user_tag_votes,
         "established_tags": established_tags,
         "pending_tags": pending_tags,
+        "item_favorited": item_favorited,
     })
 
 

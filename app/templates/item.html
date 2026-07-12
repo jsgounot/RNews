@@ -60,6 +60,13 @@
         {% if not user %}title="Login to vote"{% endif %}
       >▲</button>
       <span class="score-val-lg" id="score-{{ item.id }}">{{ item.score }}</span>
+      {% if user %}
+      <button
+        class="star-btn {% if item_favorited %}starred{% endif %}"
+        data-id="{{ item.id }}"
+        title="{% if item_favorited %}Remove from favorites{% else %}Add to favorites{% endif %}"
+      >★</button>
+      {% endif %}
     </div>
 
     <div class="item-header-info">

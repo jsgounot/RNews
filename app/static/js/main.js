@@ -183,6 +183,10 @@ document.addEventListener("click", async (e) => {
     document.querySelectorAll(`.star-btn[data-id="${itemId}"]`).forEach((b) => {
       b.classList.toggle("starred", data.favorited);
       b.title = data.favorited ? "Remove from favorites" : "Add to favorites";
+      const char = b.querySelector(".star-char");
+      if (char) char.textContent = data.favorited ? "★" : "☆";
+      const label = b.querySelector(".star-label");
+      if (label) label.textContent = data.favorited ? "Favorited" : "Favorite";
     });
     // If auto-vote fired, reflect the new score and mark vote buttons as voted
     if (data.auto_voted) {
