@@ -1,8 +1,11 @@
 import math
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from urllib.parse import urlparse
+
+import resend
 
 import httpx
 
@@ -16,14 +19,14 @@ from slugify import slugify
 from sqlalchemy.orm import Session
 
 from app.auth import (
-    authenticate_user, create_user,
+    authenticate_user, create_user, hash_password,
     get_user_by_email, get_user_by_id, get_user_by_username,
 )
 from app.database import get_db, init_db
 from app.models import (
     Comment, CommentVote, Item, ItemTag, ItemTagVote, Tag, User, Vote,
     SavedTag, Team, TeamMember, TeamItem, FavoriteItem,
-    IngestReport,
+    IngestReport, PasswordResetToken,
 )
 from app.ingest_utils import (
     normalize_doi_url,
@@ -334,8 +337,8 @@ def user_favorited_items(db: Session, user: Optional[User], items: list) -> set:
 # ── Auth routes ───────────────────────────────────────────────────────────────
 
 @app.get("/login", response_class=HTMLResponse)
-def login_page(request: Request, error: str = ""):
-    return templates.TemplateResponse(request, "login.html", {"error": error})
+def login_page(request: Request, error: str = "", message: str = ""):
+    return templates.TemplateResponse(request, "login.html", {"error": error, "message": message})
 
 
 @app.post("/login")
@@ -396,6 +399,108 @@ def register(
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/", status_code=302)
+
+
+# ── Password reset ────────────────────────────────────────────────────────────
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+def forgot_password_page(request: Request):
+    return templates.TemplateResponse(request, "forgot_password.html", {"message": "", "error": ""})
+
+
+@app.post("/forgot-password", response_class=HTMLResponse)
+def forgot_password(
+    request: Request,
+    email: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = get_user_by_email(db, email)
+    if user:
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used == False,  # noqa: E712
+        ).update({"used": True})
+        db.commit()
+
+        token = secrets.token_urlsafe(32)
+        expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
+        db.add(PasswordResetToken(token=token, user_id=user.id, expires_at=expires))
+        db.commit()
+
+        site_url = os.environ.get("SITE_URL", "https://r-news.net")
+        reset_link = f"{site_url}/reset-password/{token}"
+        resend.api_key = os.environ.get("RESEND_API_KEY", "")
+        resend.Emails.send({
+            "from": "noreply@r-news.net",
+            "to": user.email,
+            "subject": "Reset your RNews password",
+            "html": (
+                f"<p>You requested a password reset for your RNews account.</p>"
+                f'<p><a href="{reset_link}">Click here to reset your password</a></p>'
+                f"<p>This link expires in 1 hour. If you didn't request this, ignore this email.</p>"
+            ),
+        })
+
+    return templates.TemplateResponse(request, "forgot_password.html", {
+        "message": "If that email is registered, you'll receive a reset link shortly.",
+        "error": "",
+    })
+
+
+@app.get("/reset-password/{token}", response_class=HTMLResponse)
+def reset_password_page(
+    request: Request,
+    token: str,
+    db: Session = Depends(get_db),
+):
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    reset_token = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == token,
+        PasswordResetToken.used == False,  # noqa: E712
+        PasswordResetToken.expires_at > now,
+    ).first()
+    if not reset_token:
+        return templates.TemplateResponse(request, "reset_password.html", {
+            "error": "This reset link is invalid or has expired.",
+            "token": None,
+        })
+    return templates.TemplateResponse(request, "reset_password.html", {"error": "", "token": token})
+
+
+@app.post("/reset-password/{token}", response_class=HTMLResponse)
+def reset_password(
+    request: Request,
+    token: str,
+    password: str = Form(...),
+    password2: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    reset_token = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == token,
+        PasswordResetToken.used == False,  # noqa: E712
+        PasswordResetToken.expires_at > now,
+    ).first()
+    if not reset_token:
+        return templates.TemplateResponse(request, "reset_password.html", {
+            "error": "This reset link is invalid or has expired.",
+            "token": None,
+        })
+    if password != password2:
+        return templates.TemplateResponse(request, "reset_password.html", {
+            "error": "Passwords do not match.",
+            "token": token,
+        })
+    if len(password) < 6:
+        return templates.TemplateResponse(request, "reset_password.html", {
+            "error": "Password must be at least 6 characters.",
+            "token": token,
+        })
+    user = db.query(User).filter(User.id == reset_token.user_id).first()
+    user.hashed_password = hash_password(password)
+    reset_token.used = True
+    db.commit()
+    return RedirectResponse("/login?message=Password+reset+successfully.+You+can+now+log+in.", status_code=302)
 
 
 # ── Main pages ────────────────────────────────────────────────────────────────

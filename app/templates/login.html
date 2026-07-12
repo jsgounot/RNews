@@ -8,6 +8,9 @@
   {% if error %}
     <div class="form-error">{{ error }}</div>
   {% endif %}
+  {% if message %}
+    <div class="form-success">{{ message }}</div>
+  {% endif %}
   <form action="/login" method="post" class="auth-form">
     <label>Email
       <input type="email" name="email" required autofocus/>
