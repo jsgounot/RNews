@@ -266,31 +266,47 @@ def get_user_feed_items(
     tag_slugs: list = None,
     mode: str = "or",
     sort: str = "score",
-) -> list:
-    """Items from the user's saved tags, with optional multi-tag filter.
+    days: int = 7,
+    page: int = 1,
+    per_page: int = 50,
+    show_auto: bool = True,
+) -> tuple[list, int]:
+    """Return (page_items, total) for the user's feed.
 
-    tag_slugs=[]  → show all saved-tag items (no filter)
+    tag_slugs=[]  → empty result
     mode="or"     → items matching ANY selected tag
     mode="and"    → items matching ALL selected tags (one subquery per tag)
     """
     saved_tag_ids = [st.tag_id for st in profile.saved_tags]
     if not saved_tag_ids or not tag_slugs:
-        return []
+        return [], 0
+
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
 
     if mode == "or":
-        items = (
+        all_items = (
             db.query(Item)
-            .filter(Item.is_team_only == False,  # noqa: E712
-                    Item.tags.any(Tag.slug.in_(tag_slugs)))
+            .filter(
+                Item.is_team_only == False,  # noqa: E712
+                Item.created_at >= cutoff,
+                Item.tags.any(Tag.slug.in_(tag_slugs)),
+            )
             .all()
         )
     else:  # "and"
-        q = db.query(Item).filter(Item.is_team_only == False)  # noqa: E712
+        q = db.query(Item).filter(
+            Item.is_team_only == False,  # noqa: E712
+            Item.created_at >= cutoff,
+        )
         for slug in tag_slugs:
             q = q.filter(Item.tags.any(Tag.slug == slug))
-        items = q.all()
+        all_items = q.all()
 
-    return _sort_items(items, sort)
+    if not show_auto:
+        all_items = [i for i in all_items if not i.auto_ingested]
+    all_items = _sort_items(all_items, sort)
+    total = len(all_items)
+    return all_items[(page - 1) * per_page: page * per_page], total
 
 
 def get_user_favorites(db: Session, profile: User, sort: str = "score") -> list:
@@ -1397,11 +1413,13 @@ def user_page(
         page = max(1, min(page, total_pages))
         items = all_items[(page - 1) * per_page: page * per_page]
     else:
-        items = get_user_feed_items(db, profile, tag_slugs=active_tag_slugs, mode=mode, sort=sort)
-        if not show_auto:
-            items = [i for i in items if not i.auto_ingested]
-        total = len(items)
-        page = 1
+        items, total = get_user_feed_items(
+            db, profile,
+            tag_slugs=active_tag_slugs, mode=mode, sort=sort,
+            days=7, page=page, per_page=per_page, show_auto=show_auto,
+        )
+        total_pages = max(1, math.ceil(total / per_page))
+        page = max(1, min(page, total_pages))
 
     voted = user_voted_items(db, current_user, items)
     favorited = user_favorited_items(db, current_user, items)
@@ -1446,6 +1464,7 @@ def user_feed_fragment(
     mode: str = Query("or", pattern="^(and|or)$"),
     sort: str = Query("score", pattern="^(score|time)$"),
     show_auto: bool = Query(True),
+    page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
@@ -1462,9 +1481,13 @@ def user_feed_fragment(
     else:
         active_tag_slugs = [tag.slug for tag in saved_tags]
 
-    items = get_user_feed_items(db, profile, tag_slugs=active_tag_slugs, mode=mode, sort=sort)
-    if not show_auto:
-        items = [i for i in items if not i.auto_ingested]
+    per_page = 50
+    items, total = get_user_feed_items(
+        db, profile,
+        tag_slugs=active_tag_slugs, mode=mode, sort=sort,
+        days=7, page=page, per_page=per_page, show_auto=show_auto,
+    )
+    total_pages = max(1, math.ceil(total / per_page))
 
     voted     = user_voted_items(db, current_user, items)
     favorited = user_favorited_items(db, current_user, items)
@@ -1476,8 +1499,11 @@ def user_feed_fragment(
         "current_user": current_user,
         "saved_tags": saved_tags,
         "active_tag_slugs": set(active_tag_slugs),
+        "page": page,
+        "total_pages": total_pages,
+        "total": total,
     })
-    response.headers["X-Item-Count"] = str(len(items))
+    response.headers["X-Item-Count"] = str(total)
     return response
 
 

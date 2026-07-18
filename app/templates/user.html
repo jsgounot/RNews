@@ -73,7 +73,7 @@
 
   {# Sort + mode + count #}
   <div class="user-items-header">
-    <h3>Feed <span class="item-count" id="feed-count">({{ items | length }})</span></h3>
+    <h3>Feed <span class="item-count" id="feed-count">({{ total }})</span> <span class="feed-window">last 7 days</span></h3>
     <div class="sort-options">
       <button type="button"
         class="period-btn {% if sort == 'score' %}active{% endif %}"
@@ -152,12 +152,13 @@
 </div>
 
 <script>
-function refreshFeed() {
+function refreshFeed(page = 1) {
   const params = new URLSearchParams();
   params.set('tags_set', '1');
   params.set('mode', document.getElementById('mode-input').value);
   params.set('sort', document.getElementById('sort-input').value);
   params.set('show_auto', document.getElementById('show-auto-input').value);
+  params.set('page', page);
   document.querySelectorAll('input[name="tags"]:checked').forEach(cb => params.append('tags', cb.value));
 
   const area = document.getElementById('feed-items-area');

@@ -354,6 +354,7 @@ footer {
 
 .day-header h2 { font-size: 1.1rem; }
 .item-count { color: var(--text-muted); font-size: 0.85rem; font-weight: 400; }
+.feed-window { color: var(--text-muted); font-size: 0.75rem; font-weight: 400; }
 
 .sort-options { display: flex; gap: 4px; }
 

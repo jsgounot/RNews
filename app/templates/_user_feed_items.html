@@ -3,16 +3,27 @@
 <table class="items-table">
   <tbody>
     {% for item in items %}
-      {{ item_row(item, loop.index, voted, current_user, show_day=True, favorited=favorited) }}
+      {{ item_row(item, (page - 1) * 50 + loop.index, voted, current_user, show_day=True, favorited=favorited) }}
     {% endfor %}
   </tbody>
 </table>
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+    <a href="#" onclick="refreshFeed({{ page - 1 }}); return false;">&laquo; prev</a>
+  {% endif %}
+  <span>Page {{ page }} / {{ total_pages }}</span>
+  {% if page < total_pages %}
+    <a href="#" onclick="refreshFeed({{ page + 1 }}); return false;">next &raquo;</a>
+  {% endif %}
+</div>
+{% endif %}
 {% elif not saved_tags %}
 <div class="empty-state">
   No saved tags yet — save a tag from any <a href="/tags">tag page</a> to build your feed.
 </div>
 {% elif active_tag_slugs %}
-<div class="empty-state">No items found for the selected tags.</div>
+<div class="empty-state">No items found in the last 7 days for the selected tags.</div>
 {% else %}
 <div class="empty-state">Select one or more tags above to load your feed.</div>
 {% endif %}
