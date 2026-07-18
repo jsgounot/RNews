@@ -4,6 +4,8 @@
 {% block title %}{{ date.strftime('%B %d, %Y') }} — RNews{% endblock %}
 
 {% set day_base = '/teams/' ~ team.slug ~ '/day/' ~ date_str if team is defined and team else '/day/' ~ date_str %}
+{% set prev_base = '/teams/' ~ team.slug ~ '/day/' ~ prev_date_str if team is defined and team else '/day/' ~ prev_date_str %}
+{% set next_base = '/teams/' ~ team.slug ~ '/day/' ~ next_date_str if team is defined and team else '/day/' ~ next_date_str %}
 {% set auto_q = '&show_auto=0' if not show_auto else '' %}
 {% set auto_toggle_q = '&show_auto=0' if show_auto else '' %}
 
@@ -31,6 +33,15 @@
         <img src="/static/icons/robot.svg" width="13" height="13" alt="auto" style="vertical-align:middle;opacity:{% if show_auto %}1{% else %}0.4{% endif %}">
       </a>
     </div>
+  </div>
+
+  <div class="day-nav">
+    <a href="{{ prev_base }}?sort={{ sort }}{% if tag_slug %}&tag_slug={{ tag_slug }}{% endif %}{{ auto_q }}" class="day-nav-btn">&#8592; prev day</a>
+    {% if is_today %}
+    <span class="day-nav-btn day-nav-btn--disabled" title="Already on the current day">next day &#8594;</span>
+    {% else %}
+    <a href="{{ next_base }}?sort={{ sort }}{% if tag_slug %}&tag_slug={{ tag_slug }}{% endif %}{{ auto_q }}" class="day-nav-btn">next day &#8594;</a>
+    {% endif %}
   </div>
 
   {% if items %}

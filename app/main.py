@@ -584,6 +584,10 @@ def day_view(
     total_pages = max(1, math.ceil(total / per_page))
     tag = db.query(Tag).filter(Tag.slug == tag_slug).first() if tag_slug else None
 
+    today = datetime.now(timezone.utc).date()
+    prev_date_str = (day - timedelta(days=1)).strftime("%Y-%m-%d")
+    next_date_str = (day + timedelta(days=1)).strftime("%Y-%m-%d")
+
     return templates.TemplateResponse(request, "day.html", {
         "items": items,
         "voted": voted,
@@ -591,6 +595,9 @@ def day_view(
         "user": user,
         "date": day,
         "date_str": date_str,
+        "prev_date_str": prev_date_str,
+        "next_date_str": next_date_str,
+        "is_today": day >= today,
         "page": page,
         "total_pages": total_pages,
         "total": total,
@@ -1799,10 +1806,16 @@ def team_day_view(
     total_pages = max(1, math.ceil(total / per_page))
     items = items[(page - 1) * per_page: page * per_page]
     voted = user_voted_items(db, user, items)
+    today = datetime.now(timezone.utc).date()
+    prev_date_str = (day - timedelta(days=1)).strftime("%Y-%m-%d")
+    next_date_str = (day + timedelta(days=1)).strftime("%Y-%m-%d")
 
     return templates.TemplateResponse(request, "day.html", {
         "items": items, "voted": voted, "user": user,
         "date": day, "date_str": date_str,
+        "prev_date_str": prev_date_str,
+        "next_date_str": next_date_str,
+        "is_today": day >= today,
         "page": page, "total_pages": total_pages, "total": total,
         "sort": sort, "show_auto": show_auto, "tag": None, "tag_slug": None,
         "team": team,
