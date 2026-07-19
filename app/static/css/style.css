@@ -347,13 +347,13 @@ footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
   gap: 8px;
 }
 
 .day-header h2 { font-size: 1.1rem; }
-.day-nav { display: flex; gap: 8px; margin: -8px 0 16px; }
+.day-nav { display: flex; gap: 8px; margin: 0 0 16px; }
 .day-nav-btn { font-size: 0.82rem; padding: 3px 10px; border: 1px solid var(--border); border-radius: 4px; text-decoration: none; color: var(--text); }
 .day-nav-btn:hover:not(.day-nav-btn--disabled) { background: var(--hover); }
 .day-nav-btn--disabled { color: var(--text-muted); opacity: 0.45; cursor: default; }
