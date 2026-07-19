@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, ForeignKey,
+    Column, Float, Integer, String, Text, DateTime, ForeignKey,
     Boolean, UniqueConstraint, Table
 )
 from sqlalchemy.orm import relationship
@@ -109,6 +109,9 @@ class Item(Base):
     # Edit tracking
     last_edited_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     last_edited_at = Column(DateTime, nullable=True)
+
+    # Pre-computed hot score (updated hourly by cron_score.py; see app/scoring.py)
+    computed_score = Column(Float, nullable=True)
 
     submitter = relationship("User", foreign_keys=[submitter_id], back_populates="items")
     editor = relationship("User", foreign_keys=[last_edited_by])

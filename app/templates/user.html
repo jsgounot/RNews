@@ -76,6 +76,9 @@
     <h3>Feed <span class="item-count" id="feed-count">({{ total }})</span> <span class="feed-window">last 7 days</span></h3>
     <div class="sort-options">
       <button type="button"
+        class="period-btn {% if sort == 'hot' %}active{% endif %}"
+        onclick="setSort('hot')">hot</button>
+      <button type="button"
         class="period-btn {% if sort == 'score' %}active{% endif %}"
         onclick="setSort('score')">top</button>
       <button type="button"

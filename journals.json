@@ -1,117 +1,692 @@
 [
-  {"name": "Nature",                                        "pubmed": "Nature",                                                                        "abbrev": "Nature"},
-  {"name": "Nature Medicine",                               "pubmed": "Nature Medicine",                                                               "abbrev": "Nat Med"},
-  {"name": "Nature Genetics",                               "pubmed": "Nature Genetics",                                                               "abbrev": "Nat Genet"},
-  {"name": "Nature Methods",                                "pubmed": "Nature Methods",                                                                "abbrev": "Nat Methods"},
-  {"name": "Nature Biotechnology",                          "pubmed": "Nature Biotechnology",                                                          "abbrev": "Nat Biotechnol"},
-  {"name": "Nature Chemical Biology",                       "pubmed": "Nature Chemical Biology",                                                       "abbrev": "Nat Chem Biol"},
-  {"name": "Nature Microbiology",                           "pubmed": "Nature Microbiology",                                                           "abbrev": "Nat Microbiol"},
-  {"name": "Nature Reviews Microbiology",                   "pubmed": "Nature Reviews Microbiology",                                                   "abbrev": "Nat Rev Microbiol"},
-  {"name": "Nature Communications",                         "pubmed": "Nature Communications",                                                         "abbrev": "Nat Commun"},
-  {"name": "Nature Immunology",                             "pubmed": "Nature Immunology",                                                             "abbrev": "Nat Immunol"},
-  {"name": "Nature Ecology & Evolution",                    "pubmed": "Nature Ecology & Evolution",                                                    "abbrev": "Nat Ecol Evol"},
-  {"name": "Nature Structural & Molecular Biology",         "pubmed": "Nature Structural & Molecular Biology",                                         "abbrev": "Nat Struct Mol Biol"},
-  {"name": "Nature Cell Biology",                           "pubmed": "Nature Cell Biology",                                                           "abbrev": "Nat Cell Biol"},
-  {"name": "Nature Metabolism",                             "pubmed": "Nature Metabolism",                                                             "abbrev": "Nat Metab"},
-  {"name": "Nature Cancer",                                 "pubmed": "Nature Cancer",                                                                 "abbrev": "Nat Cancer"},
-  {"name": "Nature Reviews Genetics",                       "pubmed": "Nature Reviews Genetics",                                                       "abbrev": "Nat Rev Genet"},
-  {"name": "Nature Reviews Immunology",                     "pubmed": "Nature Reviews Immunology",                                                     "abbrev": "Nat Rev Immunol"},
-  {"name": "Nature Reviews Drug Discovery",                 "pubmed": "Nature Reviews Drug Discovery",                                                 "abbrev": "Nat Rev Drug Discov"},
-  {"name": "Nature Reviews Molecular Cell Biology",         "pubmed": "Nature Reviews Molecular Cell Biology",                                         "abbrev": "Nat Rev Mol Cell Biol"},
-  {"name": "Communications Biology",                        "pubmed": "Communications Biology",                                                        "abbrev": "Commun Biol"},
-  {"name": "Communications Medicine",                       "pubmed": "Communications Medicine",                                                       "abbrev": "Commun Med"},
-  {"name": "npj Biofilms and Microbiomes",                  "pubmed": "npj Biofilms and Microbiomes",                                                  "abbrev": "npj Biofilms Microbiomes"},
-  {"name": "npj Genomic Medicine",                          "pubmed": "npj Genomic Medicine",                                                          "abbrev": "npj Genom Med"},
-  {"name": "npj Vaccines",                                  "pubmed": "npj Vaccines",                                                                  "abbrev": "npj Vaccines"},
-  {"name": "npj Antimicrobials and Resistance",             "pubmed": "npj Antimicrobials and Resistance",                                             "abbrev": "npj Antimicrob Resist"},
-  {"name": "npj Systems Biology and Applications",          "pubmed": "npj Systems Biology and Applications",                                          "abbrev": "npj Syst Biol Appl"},
-  {"name": "Science",                                       "pubmed": "Science",                                                                       "abbrev": "Science"},
-  {"name": "Science Advances",                              "pubmed": "Science Advances",                                                              "abbrev": "Sci Adv"},
-  {"name": "Science Translational Medicine",                "pubmed": "Science Translational Medicine",                                                "abbrev": "Sci Transl Med"},
-  {"name": "Cell",                                          "pubmed": "Cell",                                                                          "abbrev": "Cell"},
-  {"name": "Cell Host & Microbe",                           "pubmed": "Cell Host & Microbe",                                                           "abbrev": "Cell Host Microbe"},
-  {"name": "Cell Chemical Biology",                         "pubmed": "Cell Chemical Biology",                                                         "abbrev": "Cell Chem Biol"},
-  {"name": "Cell Reports Medicine",                         "pubmed": "Cell Reports Medicine",                                                         "abbrev": "Cell Rep Med"},
-  {"name": "Cell Systems",                                  "pubmed": "Cell Systems",                                                                  "abbrev": "Cell Syst"},
-  {"name": "Cell Reports",                                  "pubmed": "Cell Reports",                                                                  "abbrev": "Cell Rep"},
-  {"name": "Cell Genomics",                                 "pubmed": "Cell Genomics",                                                                 "abbrev": "Cell Genom"},
-  {"name": "Molecular Cell",                                "pubmed": "Mol Cell",                                                                      "abbrev": "Mol Cell"},
-  {"name": "Cell Metabolism",                               "pubmed": "Cell Metab",                                                                    "abbrev": "Cell Metab"},
-  {"name": "Cancer Cell",                                   "pubmed": "Cancer Cell",                                                                   "abbrev": "Cancer Cell"},
-  {"name": "Cell Stem Cell",                                "pubmed": "Cell Stem Cell",                                                                "abbrev": "Cell Stem Cell"},
-  {"name": "Developmental Cell",                            "pubmed": "Dev Cell",                                                                      "abbrev": "Dev Cell"},
-  {"name": "Current Biology",                               "pubmed": " Curr Biol",                                                                    "abbrev": "Curr Biol"},
-  {"name": "iScience",                                      "pubmed": "iScience",                                                                      "abbrev": "iScience"},
-  {"name": "Cell Med",                                      "pubmed": "Med",                                                                           "abbrev": "Med"},
-  {"name": "EBioMedicine",                                  "pubmed": "EBioMedicine",                                                                  "abbrev": "EBioMedicine"},
-  {"name": "New England Journal of Medicine",               "pubmed": "N Engl J Med",                                                                  "abbrev": "N Engl J Med"},
-  {"name": "The Lancet",                                    "pubmed": "Lancet",                                                                        "abbrev": "Lancet"},
-  {"name": "Lancet Infectious Diseases",                    "pubmed": "Lancet Infect Dis",                                                             "abbrev": "Lancet Infect Dis"},
-  {"name": "Lancet Microbe",                                "pubmed": "Lancet Microbe",                                                                "abbrev": "Lancet Microbe"},
-  {"name": "PNAS",                                          "pubmed": "Proceedings of the National Academy of Sciences of the United States of America","abbrev": "Proc Natl Acad Sci U S A"},
-  {"name": "JAMA",                                          "pubmed": "JAMA",                                                                          "abbrev": "JAMA"},
-  {"name": "JAMA Internal Medicine",                        "pubmed": "JAMA Intern Med",                                                               "abbrev": "JAMA Intern Med"},
-  {"name": "Annals of Internal Medicine",                   "pubmed": "Ann Intern Med",                                                                "abbrev": "Ann Intern Med"},
-  {"name": "BMJ",                                           "pubmed": "BMJ",                                                                           "abbrev": "BMJ"},
-  {"name": "Journal of Clinical Investigation",             "pubmed": "J Clin Invest",                                                                 "abbrev": "J Clin Invest"},
-  {"name": "PLOS Biology",                                  "pubmed": "PLoS Biol",                                                                     "abbrev": "PLoS Biol"},
-  {"name": "Gut",                                           "pubmed": "Gut",                                                                           "abbrev": "Gut"},
-  {"name": "Critical Care Medicine",                        "pubmed": "Crit Care Med",                                                                 "abbrev": "Crit Care Med"},
-  {"name": "Intensive Care Medicine",                       "pubmed": "Intensive Care Med",                                                            "abbrev": "Intensive Care Med"},
-  {"name": "eLife",                                         "pubmed": "eLife",                                                                         "abbrev": "eLife"},
-  {"name": "The EMBO Journal",                              "pubmed": "The EMBO Journal",                                                              "abbrev": "EMBO J"},
-  {"name": "Immunity",                                      "pubmed": "Immunity",                                                                      "abbrev": "Immunity"},
-  {"name": "Journal of Immunology",                         "pubmed": "J Immunol",                                                                     "abbrev": "J Immunol"},
-  {"name": "European Journal of Immunology",                "pubmed": "Eur J Immunol",                                                                 "abbrev": "Eur J Immunol"},
-  {"name": "Microbiome",                                    "pubmed": "Microbiome",                                                                    "abbrev": "Microbiome"},
-  {"name": "Gut Microbes",                                  "pubmed": "Gut Microbes",                                                                  "abbrev": "Gut Microbes"},
-  {"name": "The ISME Journal",                              "pubmed": "The ISME Journal",                                                              "abbrev": "ISME J"},
-  {"name": "ISME Communications",                           "pubmed": "ISME Communications",                                                           "abbrev": "ISME Commun"},
-  {"name": "Environmental Microbiology",                    "pubmed": "Environmental Microbiology",                                                    "abbrev": "Environ Microbiol"},
-  {"name": "mSystems",                                      "pubmed": "mSystems",                                                                      "abbrev": "mSystems"},
-  {"name": "mBio",                                          "pubmed": "mBio",                                                                          "abbrev": "mBio"},
-  {"name": "Applied and Environmental Microbiology",        "pubmed": "Appl Environ Microbiol",                                                        "abbrev": "Appl Environ Microbiol"},
-  {"name": "Journal of Bacteriology",                       "pubmed": "J Bacteriol",                                                                   "abbrev": "J Bacteriol"},
-  {"name": "Journal of Clinical Microbiology",              "pubmed": "J Clin Microbiol",                                                              "abbrev": "J Clin Microbiol"},
-  {"name": "Microbiology Spectrum",                         "pubmed": "Microbiol Spectr",                                                              "abbrev": "Microbiol Spectr"},
-  {"name": "Molecular Microbiology",                        "pubmed": "Mol Microbiol",                                                                 "abbrev": "Mol Microbiol"},
-  {"name": "FEMS Microbiology Ecology",                     "pubmed": "FEMS Microbiol Ecol",                                                           "abbrev": "FEMS Microbiol Ecol"},
-  {"name": "FEMS Microbiology Reviews",                     "pubmed": "FEMS Microbiol Rev",                                                            "abbrev": "FEMS Microbiol Rev"},
-  {"name": "Clinical Microbiology Reviews",                 "pubmed": "Clin Microbiol Rev",                                                            "abbrev": "Clin Microbiol Rev"},
-  {"name": "Microbial Genomics",                            "pubmed": "Microb Genom",                                                                  "abbrev": "Microb Genom"},
-  {"name": "Microbial Cell Factories",                      "pubmed": "Microb Cell Fact",                                                              "abbrev": "Microb Cell Fact"},
-  {"name": "Emerging Microbes & Infections",                "pubmed": "Emerg Microbes Infect",                                                         "abbrev": "Emerg Microbes Infect"},
-  {"name": "Virulence",                                     "pubmed": "Virulence",                                                                     "abbrev": "Virulence"},
-  {"name": "Trends in Microbiology",                        "pubmed": "Trends Microbiol",                                                              "abbrev": "Trends Microbiol"},
-  {"name": "Annual Review of Microbiology",                 "pubmed": "Annu Rev Microbiol",                                                            "abbrev": "Annu Rev Microbiol"},
-  {"name": "Infection and Immunity",                        "pubmed": "Infection and Immunity",                                                        "abbrev": "Infect Immun"},
-  {"name": "Antimicrobial Agents and Chemotherapy",         "pubmed": "Antimicrobial Agents and Chemotherapy",                                         "abbrev": "Antimicrob Agents Chemother"},
-  {"name": "Clinical Infectious Diseases",                  "pubmed": "Clin Infect Dis",                                                               "abbrev": "Clin Infect Dis"},
-  {"name": "Journal of Infectious Diseases",                "pubmed": "J Infect Dis",                                                                  "abbrev": "J Infect Dis"},
-  {"name": "Journal of Antimicrobial Chemotherapy",         "pubmed": "J Antimicrob Chemother",                                                        "abbrev": "J Antimicrob Chemother"},
-  {"name": "International Journal of Antimicrobial Agents", "pubmed": "Int J Antimicrob Agents",                                                       "abbrev": "Int J Antimicrob Agents"},
-  {"name": "Drug Resistance Updates",                       "pubmed": "Drug Resist Updat",                                                             "abbrev": "Drug Resist Updat"},
-  {"name": "Emerging Infectious Diseases",                  "pubmed": "Emerging Infectious Diseases",                                                  "abbrev": "Emerg Infect Dis"},
-  {"name": "Eurosurveillance",                              "pubmed": "Euro Surveill",                                                                 "abbrev": "Euro Surveill"},
-  {"name": "Epidemiology and Infection",                    "pubmed": "Epidemiol Infect",                                                              "abbrev": "Epidemiol Infect"},
-  {"name": "Open Forum Infectious Diseases",                "pubmed": "Open Forum Infect Dis",                                                         "abbrev": "Open Forum Infect Dis"},
-  {"name": "BMC Infectious Diseases",                       "pubmed": "BMC Infect Dis",                                                                "abbrev": "BMC Infect Dis"},
-  {"name": "Clinical Microbiology and Infection",           "pubmed": "Clin Microbiol Infect",                                                         "abbrev": "Clin Microbiol Infect"},
-  {"name": "Nucleic Acids Research",                        "pubmed": "Nucleic Acids Research",                                                        "abbrev": "Nucleic Acids Res"},
-  {"name": "Bioinformatics",                                "pubmed": "Bioinformatics",                                                                "abbrev": "Bioinformatics"},
-  {"name": "Briefings in Bioinformatics",                   "pubmed": "Briefings in Bioinformatics",                                                   "abbrev": "Brief Bioinform"},
-  {"name": "Genome Biology",                                "pubmed": "Genome Biology",                                                                "abbrev": "Genome Biol"},
-  {"name": "Genome Medicine",                               "pubmed": "Genome Medicine",                                                               "abbrev": "Genome Med"},
-  {"name": "Genome Research",                               "pubmed": "Genome Research",                                                               "abbrev": "Genome Res"},
-  {"name": "GigaScience",                                   "pubmed": "GigaScience",                                                                   "abbrev": "Gigascience"},
-  {"name": "PLOS Genetics",                                 "pubmed": "PLoS Genet",                                                                    "abbrev": "PLoS Genet"},
-  {"name": "PLOS Computational Biology",                    "pubmed": "PLoS Comput Biol",                                                              "abbrev": "PLoS Comput Biol"},
-  {"name": "BMC Genomics",                                  "pubmed": "BMC Genomics",                                                                  "abbrev": "BMC Genomics"},
-  {"name": "BMC Bioinformatics",                            "pubmed": "BMC Bioinformatics",                                                            "abbrev": "BMC Bioinformatics"},
-  {"name": "Molecular Biology and Evolution",               "pubmed": "Mol Biol Evol",                                                                 "abbrev": "Mol Biol Evol"},
-  {"name": "American Journal of Human Genetics",            "pubmed": "Am J Hum Genet",                                                                "abbrev": "Am J Hum Genet"},
-  {"name": "G3: Genes, Genomes, Genetics",                  "pubmed": "G3 (Bethesda)",                                                                 "abbrev": "G3 (Bethesda)"},
-  {"name": "Genetics",                                      "pubmed": "Genetics",                                                                      "abbrev": "Genetics"},
-  {"name": "Human Molecular Genetics",                      "pubmed": "Hum Mol Genet",                                                                 "abbrev": "Hum Mol Genet"},
-  {"name": "One Health",                                    "pubmed": "One Health",                                                                    "abbrev": "One Health"}
+  {
+    "name": "Nature",
+    "pubmed": "Nature",
+    "abbrev": "Nature",
+    "journal_score": 17.708
+  },
+  {
+    "name": "Nature Medicine",
+    "pubmed": "Nature Medicine",
+    "abbrev": "Nat Med",
+    "journal_score": 29.023
+  },
+  {
+    "name": "Nature Genetics",
+    "pubmed": "Nature Genetics",
+    "abbrev": "Nat Genet",
+    "journal_score": 17.123
+  },
+  {
+    "name": "Nature Methods",
+    "pubmed": "Nature Methods",
+    "abbrev": "Nat Methods",
+    "journal_score": 20.74
+  },
+  {
+    "name": "Nature Biotechnology",
+    "pubmed": "Nature Biotechnology",
+    "abbrev": "Nat Biotechnol",
+    "journal_score": 12.121
+  },
+  {
+    "name": "Nature Chemical Biology",
+    "pubmed": "Nature Chemical Biology",
+    "abbrev": "Nat Chem Biol",
+    "journal_score": 9.647
+  },
+  {
+    "name": "Nature Microbiology",
+    "pubmed": "Nature Microbiology",
+    "abbrev": "Nat Microbiol",
+    "journal_score": 15.968
+  },
+  {
+    "name": "Nature Reviews Microbiology",
+    "pubmed": "Nature Reviews Microbiology",
+    "abbrev": "Nat Rev Microbiol",
+    "journal_score": 31.501
+  },
+  {
+    "name": "Nature Communications",
+    "pubmed": "Nature Communications",
+    "abbrev": "Nat Commun",
+    "journal_score": 16.316
+  },
+  {
+    "name": "Nature Immunology",
+    "pubmed": "Nature Immunology",
+    "abbrev": "Nat Immunol",
+    "journal_score": 12.846
+  },
+  {
+    "name": "Nature Ecology & Evolution",
+    "pubmed": "Nature Ecology & Evolution",
+    "abbrev": "Nat Ecol Evol",
+    "journal_score": 10.511
+  },
+  {
+    "name": "Nature Structural & Molecular Biology",
+    "pubmed": "Nature Structural & Molecular Biology",
+    "abbrev": "Nat Struct Mol Biol",
+    "journal_score": 10.178
+  },
+  {
+    "name": "Nature Cell Biology",
+    "pubmed": "Nature Cell Biology",
+    "abbrev": "Nat Cell Biol",
+    "journal_score": 15.487
+  },
+  {
+    "name": "Nature Metabolism",
+    "pubmed": "Nature Metabolism",
+    "abbrev": "Nat Metab",
+    "journal_score": 16.581
+  },
+  {
+    "name": "Nature Cancer",
+    "pubmed": "Nature Cancer",
+    "abbrev": "Nat Cancer",
+    "journal_score": 15.681
+  },
+  {
+    "name": "Nature Reviews Genetics",
+    "pubmed": "Nature Reviews Genetics",
+    "abbrev": "Nat Rev Genet",
+    "journal_score": 16.431
+  },
+  {
+    "name": "Nature Reviews Immunology",
+    "pubmed": "Nature Reviews Immunology",
+    "abbrev": "Nat Rev Immunol",
+    "journal_score": 21.811
+  },
+  {
+    "name": "Nature Reviews Drug Discovery",
+    "pubmed": "Nature Reviews Drug Discovery",
+    "abbrev": "Nat Rev Drug Discov",
+    "journal_score": 13.497
+  },
+  {
+    "name": "Nature Reviews Molecular Cell Biology",
+    "pubmed": "Nature Reviews Molecular Cell Biology",
+    "abbrev": "Nat Rev Mol Cell Biol",
+    "journal_score": 41.125
+  },
+  {
+    "name": "Communications Biology",
+    "pubmed": "Communications Biology",
+    "abbrev": "Commun Biol",
+    "journal_score": 5.791
+  },
+  {
+    "name": "Communications Medicine",
+    "pubmed": "Communications Medicine",
+    "abbrev": "Commun Med",
+    "journal_score": 5.198
+  },
+  {
+    "name": "npj Biofilms and Microbiomes",
+    "pubmed": "npj Biofilms and Microbiomes",
+    "abbrev": "npj Biofilms Microbiomes",
+    "journal_score": 9.112
+  },
+  {
+    "name": "npj Genomic Medicine",
+    "pubmed": "npj Genomic Medicine",
+    "abbrev": "npj Genom Med",
+    "journal_score": 5.024
+  },
+  {
+    "name": "npj Vaccines",
+    "pubmed": "npj Vaccines",
+    "abbrev": "npj Vaccines",
+    "journal_score": 6.325
+  },
+  {
+    "name": "npj Antimicrobials and Resistance",
+    "pubmed": "npj Antimicrobials and Resistance",
+    "abbrev": "npj Antimicrob Resist",
+    "journal_score": 11.493
+  },
+  {
+    "name": "npj Systems Biology and Applications",
+    "pubmed": "npj Systems Biology and Applications",
+    "abbrev": "npj Syst Biol Appl",
+    "journal_score": 4.37
+  },
+  {
+    "name": "Science",
+    "pubmed": "Science",
+    "abbrev": "Science",
+    "journal_score": 19.507
+  },
+  {
+    "name": "Science Advances",
+    "pubmed": "Science Advances",
+    "abbrev": "Sci Adv",
+    "journal_score": 12.028
+  },
+  {
+    "name": "Science Translational Medicine",
+    "pubmed": "Science Translational Medicine",
+    "abbrev": "Sci Transl Med",
+    "journal_score": 14.756
+  },
+  {
+    "name": "Cell",
+    "pubmed": "Cell",
+    "abbrev": "Cell",
+    "journal_score": 38.478
+  },
+  {
+    "name": "Cell Host & Microbe",
+    "pubmed": "Cell Host & Microbe",
+    "abbrev": "Cell Host Microbe",
+    "journal_score": 14.306
+  },
+  {
+    "name": "Cell Chemical Biology",
+    "pubmed": "Cell Chemical Biology",
+    "abbrev": "Cell Chem Biol",
+    "journal_score": 7.549
+  },
+  {
+    "name": "Cell Reports Medicine",
+    "pubmed": "Cell Reports Medicine",
+    "abbrev": "Cell Rep Med",
+    "journal_score": 11.224
+  },
+  {
+    "name": "Cell Systems",
+    "pubmed": "Cell Systems",
+    "abbrev": "Cell Syst",
+    "journal_score": 5.775
+  },
+  {
+    "name": "Cell Reports",
+    "pubmed": "Cell Reports",
+    "abbrev": "Cell Rep",
+    "journal_score": 7.867
+  },
+  {
+    "name": "Cell Genomics",
+    "pubmed": "Cell Genomics",
+    "abbrev": "Cell Genom",
+    "journal_score": 8.069
+  },
+  {
+    "name": "Molecular Cell",
+    "pubmed": "Mol Cell",
+    "abbrev": "Mol Cell",
+    "journal_score": 12.917
+  },
+  {
+    "name": "Cell Metabolism",
+    "pubmed": "Cell Metab",
+    "abbrev": "Cell Metab",
+    "journal_score": 27.449
+  },
+  {
+    "name": "Cancer Cell",
+    "pubmed": "Cancer Cell",
+    "abbrev": "Cancer Cell",
+    "journal_score": 31.081
+  },
+  {
+    "name": "Cell Stem Cell",
+    "pubmed": "Cell Stem Cell",
+    "abbrev": "Cell Stem Cell",
+    "journal_score": 17.636
+  },
+  {
+    "name": "Developmental Cell",
+    "pubmed": "Dev Cell",
+    "abbrev": "Dev Cell",
+    "journal_score": 10.097
+  },
+  {
+    "name": "Current Biology",
+    "pubmed": " Curr Biol",
+    "abbrev": "Curr Biol",
+    "journal_score": 5.784
+  },
+  {
+    "name": "iScience",
+    "pubmed": "iScience",
+    "abbrev": "iScience",
+    "journal_score": 4.372
+  },
+  {
+    "name": "Cell Med",
+    "pubmed": "Med",
+    "abbrev": "Med",
+    "journal_score": 8.135
+  },
+  {
+    "name": "EBioMedicine",
+    "pubmed": "EBioMedicine",
+    "abbrev": "EBioMedicine",
+    "journal_score": 9.386
+  },
+  {
+    "name": "New England Journal of Medicine",
+    "pubmed": "N Engl J Med",
+    "abbrev": "N Engl J Med",
+    "journal_score": 28.999
+  },
+  {
+    "name": "The Lancet",
+    "pubmed": "Lancet",
+    "abbrev": "Lancet",
+    "journal_score": 19.051
+  },
+  {
+    "name": "Lancet Infectious Diseases",
+    "pubmed": "Lancet Infect Dis",
+    "abbrev": "Lancet Infect Dis",
+    "journal_score": 11.218
+  },
+  {
+    "name": "Lancet Microbe",
+    "pubmed": "Lancet Microbe",
+    "abbrev": "Lancet Microbe",
+    "journal_score": 11.362
+  },
+  {
+    "name": "PNAS",
+    "pubmed": "Proceedings of the National Academy of Sciences of the United States of America",
+    "abbrev": "Proc Natl Acad Sci U S A",
+    "journal_score": 8.051
+  },
+  {
+    "name": "JAMA",
+    "pubmed": "JAMA",
+    "abbrev": "JAMA",
+    "journal_score": 8.486
+  },
+  {
+    "name": "JAMA Internal Medicine",
+    "pubmed": "JAMA Intern Med",
+    "abbrev": "JAMA Intern Med",
+    "journal_score": 6.785
+  },
+  {
+    "name": "Annals of Internal Medicine",
+    "pubmed": "Ann Intern Med",
+    "abbrev": "Ann Intern Med",
+    "journal_score": 4.514
+  },
+  {
+    "name": "BMJ",
+    "pubmed": "BMJ",
+    "abbrev": "BMJ",
+    "journal_score": 0.0
+  },
+  {
+    "name": "Journal of Clinical Investigation",
+    "pubmed": "J Clin Invest",
+    "abbrev": "J Clin Invest",
+    "journal_score": 9.547
+  },
+  {
+    "name": "PLOS Biology",
+    "pubmed": "PLoS Biol",
+    "abbrev": "PLoS Biol",
+    "journal_score": 6.664
+  },
+  {
+    "name": "Gut",
+    "pubmed": "Gut",
+    "abbrev": "Gut",
+    "journal_score": 10.158
+  },
+  {
+    "name": "Critical Care Medicine",
+    "pubmed": "Crit Care Med",
+    "abbrev": "Crit Care Med",
+    "journal_score": 1.096
+  },
+  {
+    "name": "Intensive Care Medicine",
+    "pubmed": "Intensive Care Med",
+    "abbrev": "Intensive Care Med",
+    "journal_score": 6.158
+  },
+  {
+    "name": "eLife",
+    "pubmed": "eLife",
+    "abbrev": "eLife",
+    "journal_score": 1.682
+  },
+  {
+    "name": "The EMBO Journal",
+    "pubmed": "The EMBO Journal",
+    "abbrev": "EMBO J",
+    "journal_score": 7.619
+  },
+  {
+    "name": "Immunity",
+    "pubmed": "Immunity",
+    "abbrev": "Immunity",
+    "journal_score": 22.199
+  },
+  {
+    "name": "Journal of Immunology",
+    "pubmed": "J Immunol",
+    "abbrev": "J Immunol",
+    "journal_score": 0.714
+  },
+  {
+    "name": "European Journal of Immunology",
+    "pubmed": "Eur J Immunol",
+    "abbrev": "Eur J Immunol",
+    "journal_score": 3.166
+  },
+  {
+    "name": "Microbiome",
+    "pubmed": "Microbiome",
+    "abbrev": "Microbiome",
+    "journal_score": 13.917
+  },
+  {
+    "name": "Gut Microbes",
+    "pubmed": "Gut Microbes",
+    "abbrev": "Gut Microbes",
+    "journal_score": 14.914
+  },
+  {
+    "name": "The ISME Journal",
+    "pubmed": "The ISME Journal",
+    "abbrev": "ISME J",
+    "journal_score": 9.379
+  },
+  {
+    "name": "ISME Communications",
+    "pubmed": "ISME Communications",
+    "abbrev": "ISME Commun",
+    "journal_score": 4.29
+  },
+  {
+    "name": "Environmental Microbiology",
+    "pubmed": "Environmental Microbiology",
+    "abbrev": "Environ Microbiol",
+    "journal_score": 3.156
+  },
+  {
+    "name": "mSystems",
+    "pubmed": "mSystems",
+    "abbrev": "mSystems",
+    "journal_score": 5.631
+  },
+  {
+    "name": "mBio",
+    "pubmed": "mBio",
+    "abbrev": "mBio",
+    "journal_score": 5.579
+  },
+  {
+    "name": "Applied and Environmental Microbiology",
+    "pubmed": "Appl Environ Microbiol",
+    "abbrev": "Appl Environ Microbiol",
+    "journal_score": 3.906
+  },
+  {
+    "name": "Journal of Bacteriology",
+    "pubmed": "J Bacteriol",
+    "abbrev": "J Bacteriol",
+    "journal_score": 3.971
+  },
+  {
+    "name": "Journal of Clinical Microbiology",
+    "pubmed": "J Clin Microbiol",
+    "abbrev": "J Clin Microbiol",
+    "journal_score": 4.048
+  },
+  {
+    "name": "Microbiology Spectrum",
+    "pubmed": "Microbiol Spectr",
+    "abbrev": "Microbiol Spectr",
+    "journal_score": 3.487
+  },
+  {
+    "name": "Molecular Microbiology",
+    "pubmed": "Mol Microbiol",
+    "abbrev": "Mol Microbiol",
+    "journal_score": 2.947
+  },
+  {
+    "name": "FEMS Microbiology Ecology",
+    "pubmed": "FEMS Microbiol Ecol",
+    "abbrev": "FEMS Microbiol Ecol",
+    "journal_score": 5.224
+  },
+  {
+    "name": "FEMS Microbiology Reviews",
+    "pubmed": "FEMS Microbiol Rev",
+    "abbrev": "FEMS Microbiol Rev",
+    "journal_score": 12.781
+  },
+  {
+    "name": "Clinical Microbiology Reviews",
+    "pubmed": "Clin Microbiol Rev",
+    "abbrev": "Clin Microbiol Rev",
+    "journal_score": 16.23
+  },
+  {
+    "name": "Microbial Genomics",
+    "pubmed": "Microb Genom",
+    "abbrev": "Microb Genom",
+    "journal_score": 3.2
+  },
+  {
+    "name": "Microbial Cell Factories",
+    "pubmed": "Microb Cell Fact",
+    "abbrev": "Microb Cell Fact",
+    "journal_score": 7.028
+  },
+  {
+    "name": "Emerging Microbes & Infections",
+    "pubmed": "Emerg Microbes Infect",
+    "abbrev": "Emerg Microbes Infect",
+    "journal_score": 6.993
+  },
+  {
+    "name": "Virulence",
+    "pubmed": "Virulence",
+    "abbrev": "Virulence",
+    "journal_score": 4.892
+  },
+  {
+    "name": "Trends in Microbiology",
+    "pubmed": "Trends Microbiol",
+    "abbrev": "Trends Microbiol",
+    "journal_score": 7.527
+  },
+  {
+    "name": "Annual Review of Microbiology",
+    "pubmed": "Annu Rev Microbiol",
+    "abbrev": "Annu Rev Microbiol",
+    "journal_score": 9.436
+  },
+  {
+    "name": "Infection and Immunity",
+    "pubmed": "Infection and Immunity",
+    "abbrev": "Infect Immun",
+    "journal_score": 3.588
+  },
+  {
+    "name": "Antimicrobial Agents and Chemotherapy",
+    "pubmed": "Antimicrobial Agents and Chemotherapy",
+    "abbrev": "Antimicrob Agents Chemother",
+    "journal_score": 3.858
+  },
+  {
+    "name": "Clinical Infectious Diseases",
+    "pubmed": "Clin Infect Dis",
+    "abbrev": "Clin Infect Dis",
+    "journal_score": 5.32
+  },
+  {
+    "name": "Journal of Infectious Diseases",
+    "pubmed": "J Infect Dis",
+    "abbrev": "J Infect Dis",
+    "journal_score": 3.679
+  },
+  {
+    "name": "Journal of Antimicrobial Chemotherapy",
+    "pubmed": "J Antimicrob Chemother",
+    "abbrev": "J Antimicrob Chemother",
+    "journal_score": 3.784
+  },
+  {
+    "name": "International Journal of Antimicrobial Agents",
+    "pubmed": "Int J Antimicrob Agents",
+    "abbrev": "Int J Antimicrob Agents",
+    "journal_score": 3.831
+  },
+  {
+    "name": "Drug Resistance Updates",
+    "pubmed": "Drug Resist Updat",
+    "abbrev": "Drug Resist Updat",
+    "journal_score": 14.416
+  },
+  {
+    "name": "Emerging Infectious Diseases",
+    "pubmed": "Emerging Infectious Diseases",
+    "abbrev": "Emerg Infect Dis",
+    "journal_score": 5.843
+  },
+  {
+    "name": "Eurosurveillance",
+    "pubmed": "Euro Surveill",
+    "abbrev": "Euro Surveill",
+    "journal_score": 7.669
+  },
+  {
+    "name": "Epidemiology and Infection",
+    "pubmed": "Epidemiol Infect",
+    "abbrev": "Epidemiol Infect",
+    "journal_score": 2.561
+  },
+  {
+    "name": "Open Forum Infectious Diseases",
+    "pubmed": "Open Forum Infect Dis",
+    "abbrev": "Open Forum Infect Dis",
+    "journal_score": 0.994
+  },
+  {
+    "name": "BMC Infectious Diseases",
+    "pubmed": "BMC Infect Dis",
+    "abbrev": "BMC Infect Dis",
+    "journal_score": 2.876
+  },
+  {
+    "name": "Clinical Microbiology and Infection",
+    "pubmed": "Clin Microbiol Infect",
+    "abbrev": "Clin Microbiol Infect",
+    "journal_score": 11.0
+  },
+  {
+    "name": "Nucleic Acids Research",
+    "pubmed": "Nucleic Acids Research",
+    "abbrev": "Nucleic Acids Res",
+    "journal_score": 14.9
+  },
+  {
+    "name": "Bioinformatics",
+    "pubmed": "Bioinformatics",
+    "abbrev": "Bioinformatics",
+    "journal_score": 5.8
+  },
+  {
+    "name": "Briefings in Bioinformatics",
+    "pubmed": "Briefings in Bioinformatics",
+    "abbrev": "Brief Bioinform",
+    "journal_score": 9.5
+  },
+  {
+    "name": "Genome Biology",
+    "pubmed": "Genome Biology",
+    "abbrev": "Genome Biol",
+    "journal_score": 12.3
+  },
+  {
+    "name": "Genome Medicine",
+    "pubmed": "Genome Medicine",
+    "abbrev": "Genome Med",
+    "journal_score": 10.4
+  },
+  {
+    "name": "Genome Research",
+    "pubmed": "Genome Research",
+    "abbrev": "Genome Res",
+    "journal_score": 6.9
+  },
+  {
+    "name": "GigaScience",
+    "pubmed": "GigaScience",
+    "abbrev": "Gigascience",
+    "journal_score": 3.7
+  },
+  {
+    "name": "PLOS Genetics",
+    "pubmed": "PLoS Genet",
+    "abbrev": "PLoS Genet",
+    "journal_score": 4.0
+  },
+  {
+    "name": "PLOS Computational Biology",
+    "pubmed": "PLoS Comput Biol",
+    "abbrev": "PLoS Comput Biol",
+    "journal_score": 4.0
+  },
+  {
+    "name": "BMC Genomics",
+    "pubmed": "BMC Genomics",
+    "abbrev": "BMC Genomics",
+    "journal_score": 3.5
+  },
+  {
+    "name": "BMC Bioinformatics",
+    "pubmed": "BMC Bioinformatics",
+    "abbrev": "BMC Bioinformatics",
+    "journal_score": 3.0
+  },
+  {
+    "name": "Molecular Biology and Evolution",
+    "pubmed": "Mol Biol Evol",
+    "abbrev": "Mol Biol Evol",
+    "journal_score": 11.1
+  },
+  {
+    "name": "American Journal of Human Genetics",
+    "pubmed": "Am J Hum Genet",
+    "abbrev": "Am J Hum Genet",
+    "journal_score": 9.8
+  },
+  {
+    "name": "G3: Genes, Genomes, Genetics",
+    "pubmed": "G3 (Bethesda)",
+    "abbrev": "G3 (Bethesda)",
+    "journal_score": 2.5
+  },
+  {
+    "name": "Genetics",
+    "pubmed": "Genetics",
+    "abbrev": "Genetics",
+    "journal_score": 3.7
+  },
+  {
+    "name": "Human Molecular Genetics",
+    "pubmed": "Hum Mol Genet",
+    "abbrev": "Hum Mol Genet",
+    "journal_score": 4.5
+  },
+  {
+    "name": "One Health",
+    "pubmed": "One Health",
+    "abbrev": "One Health",
+    "journal_score": 7.1
+  }
 ]

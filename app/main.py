@@ -217,7 +217,7 @@ def get_items_for_period(
     tag_slug: Optional[str] = None,
     page: int = 1,
     per_page: int = 50,
-    sort: str = "score",
+    sort: str = "hot",
     show_auto: bool = True,
 ):
     q = db.query(Item).filter(
@@ -240,7 +240,9 @@ def get_items_for_period(
 def _sort_items(items: list, sort: str) -> list:
     if sort == "time":
         items.sort(key=lambda i: i.created_at, reverse=True)
-    else:
+    elif sort == "hot":
+        items.sort(key=lambda i: (-(i.computed_score or 0.0), i.created_at))
+    else:  # "score" / top — raw vote count
         items.sort(key=lambda i: (-i.score, i.created_at))
     return items
 
@@ -250,7 +252,7 @@ def get_top_items(
     days: int = 7,
     limit: int = 20,
     tag_slug: Optional[str] = None,
-    sort: str = "score",
+    sort: str = "hot",
 ):
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
     q = db.query(Item).filter(Item.created_at >= cutoff, Item.is_team_only == False)  # noqa: E712
@@ -265,7 +267,7 @@ def get_user_feed_items(
     profile: User,
     tag_slugs: list = None,
     mode: str = "or",
-    sort: str = "score",
+    sort: str = "hot",
     days: int = 7,
     page: int = 1,
     per_page: int = 50,
@@ -526,7 +528,7 @@ def homepage(
     request: Request,
     days: int = Query(7, ge=1, le=365),
     limit: int = Query(20, ge=5, le=100),
-    sort: str = Query("score", pattern="^(score|time)$"),
+    sort: str = Query("hot", pattern="^(score|time|hot)$"),
     show_auto: bool = Query(True),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
@@ -561,7 +563,7 @@ def day_view(
     request: Request,
     date_str: str,
     page: int = Query(1, ge=1),
-    sort: str = Query("score", pattern="^(score|time)$"),
+    sort: str = Query("hot", pattern="^(score|time|hot)$"),
     tag_slug: Optional[str] = Query(None),
     show_auto: bool = Query(True),
     db: Session = Depends(get_db),
@@ -614,7 +616,7 @@ def tag_page(
     tag_slug: str,
     days: int = Query(7, ge=1, le=365),
     limit: int = Query(20, ge=5, le=100),
-    sort: str = Query("score", pattern="^(score|time)$"),
+    sort: str = Query("hot", pattern="^(score|time|hot)$"),
     show_auto: bool = Query(True),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
@@ -737,7 +739,7 @@ def multi_tag_page(
     mode: str = Query("intersection", pattern="^(union|intersection)$"),
     days: int = Query(7, ge=1, le=365),
     limit: int = Query(20, ge=5, le=100),
-    sort: str = Query("score", pattern="^(score|time)$"),
+    sort: str = Query("hot", pattern="^(score|time|hot)$"),
     show_auto: bool = Query(True),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
@@ -791,7 +793,7 @@ def search(
     request: Request,
     q: str = Query(""),
     tag_mode: bool = Query(False),
-    sort: str = Query("score"),
+    sort: str = Query("hot"),
     days: Optional[int] = Query(None),
     page: int = Query(1, ge=1),
     show_auto: bool = Query(True),
@@ -829,6 +831,8 @@ def search(
 
     if sort == "time":
         raw_items.sort(key=lambda i: i.created_at, reverse=True)
+    elif sort == "hot":
+        raw_items.sort(key=lambda i: (-(i.computed_score or 0.0), i.created_at))
     else:
         raw_items.sort(key=lambda i: (-i.score, i.created_at))
 
@@ -1383,7 +1387,7 @@ def user_page(
     tags: list[str] = Query(default=[]),
     tags_set: bool = Query(False),
     mode: str = Query("or", pattern="^(and|or)$"),
-    sort: str = Query("score", pattern="^(score|time)$"),
+    sort: str = Query("hot", pattern="^(score|time|hot)$"),
     page: int = Query(1, ge=1),
     show_auto: bool = Query(True),
     db: Session = Depends(get_db),
@@ -1469,7 +1473,7 @@ def user_feed_fragment(
     tags: list[str] = Query(default=[]),
     tags_set: bool = Query(False),
     mode: str = Query("or", pattern="^(and|or)$"),
-    sort: str = Query("score", pattern="^(score|time)$"),
+    sort: str = Query("hot", pattern="^(score|time|hot)$"),
     show_auto: bool = Query(True),
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
@@ -1769,7 +1773,7 @@ def team_day_view(
     team_slug: str,
     date_str: str,
     page: int = Query(1, ge=1),
-    sort: str = Query("score", pattern="^(score|time)$"),
+    sort: str = Query("hot", pattern="^(score|time|hot)$"),
     tag: Optional[str] = Query(None),
     show_auto: bool = Query(True),
     db: Session = Depends(get_db),
@@ -1796,7 +1800,9 @@ def team_day_view(
 
     if not show_auto:
         items = [i for i in items if not i.auto_ingested]
-    if sort == "score":
+    if sort == "hot":
+        items.sort(key=lambda i: (-(i.computed_score or 0.0), i.created_at))
+    elif sort == "score":
         items.sort(key=lambda i: (-i.score, i.created_at))
     else:
         items.sort(key=lambda i: i.created_at, reverse=True)

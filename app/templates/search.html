@@ -33,6 +33,8 @@
       {% endfor %}
     </div>
     <div class="sort-options">
+      <a href="{{ base }}&sort=hot{% if days %}&days={{ days }}{% endif %}&page=1{{ auto_q }}"
+         class="period-btn {% if sort == 'hot' %}active{% endif %}">hot</a>
       <a href="{{ base }}&sort=score{% if days %}&days={{ days }}{% endif %}&page=1{{ auto_q }}"
          class="period-btn {% if sort == 'score' %}active{% endif %}">top</a>
       <a href="{{ base }}&sort=time{% if days %}&days={{ days }}{% endif %}&page=1{{ auto_q }}"
