@@ -360,7 +360,7 @@ footer {
 .item-count { color: var(--text-muted); font-size: 0.85rem; font-weight: 400; }
 .feed-window { color: var(--text-muted); font-size: 0.75rem; font-weight: 400; }
 
-.sort-options { display: flex; gap: 4px; }
+.sort-options { display: flex; gap: 4px; flex-wrap: wrap; }
 
 /* Pagination */
 .pagination {
@@ -936,10 +936,10 @@ footer {
   .search-wrap { width: 100%; }
 }
 
-/* Small phones: hide tags column, hide nav text links */
+/* Small phones: hide tags column, wrap nav links */
 @media (max-width: 480px) {
   .col-tags { display: none; }
-  .site-nav a:not(.btn-submit) { display: none; }
+  .site-nav { flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 }
 
 /* ── About page ───────────────────────────────────────────────────────────── */
