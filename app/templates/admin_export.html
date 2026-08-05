@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Export — Admin — RNews{% endblock %}
+
+{% block content %}
+<div class="page-admin" style="max-width:640px">
+  <h2>Export database tables</h2>
+  <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:24px">
+    Downloads are gzip-compressed CSV files. Each link triggers an immediate download.
+  </p>
+
+  <table class="items-table" style="width:100%">
+    <thead>
+      <tr>
+        <th style="text-align:left;padding:8px 10px">Export</th>
+        <th style="text-align:left;padding:8px 10px">Description</th>
+        <th style="padding:8px 10px"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for key, meta in exports.items() %}
+      <tr>
+        <td style="padding:8px 10px;white-space:nowrap;font-weight:500">{{ meta.label }}</td>
+        <td style="padding:8px 10px;font-size:0.85rem;color:var(--text-muted)">{{ meta.description }}</td>
+        <td style="padding:8px 10px;white-space:nowrap">
+          <a href="/admin/export/download/{{ key }}" class="period-btn">
+            ↓ {{ key }}.csv.gz
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

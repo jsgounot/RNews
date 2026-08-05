@@ -2655,3 +2655,112 @@ def _seed_tag_mappings(mapping: dict, db: Session):
         f"Updated:  {updated}\n"
         f"Skipped:  {skipped}\n"
     )
+
+
+# ── Admin: CSV export ─────────────────────────────────────────────────────────
+
+import csv
+import gzip
+import io as _io
+
+_EXPORTS: dict[str, dict] = {
+    "item_tags": {
+        "label": "Item × Tag associations",
+        "description": "One row per (item, tag) pair — item metadata + tag name + vote count.",
+    },
+    "items": {
+        "label": "Items",
+        "description": "All items with metadata (title, URL, journal, dates, scores).",
+    },
+    "tags": {
+        "label": "Tags",
+        "description": "All tags with name, slug, and aggregate vote count.",
+    },
+}
+
+
+@app.get("/admin/export", response_class=HTMLResponse)
+def admin_export_page(
+    request: Request,
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user or not user.is_superadmin:
+        raise HTTPException(status_code=403, detail="Superadmin only")
+    return templates.TemplateResponse(
+        request, "admin_export.html", {"user": user, "exports": _EXPORTS}
+    )
+
+
+@app.get("/admin/export/download/{name}")
+def admin_export_download(
+    name: str,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user or not user.is_superadmin:
+        raise HTTPException(status_code=403, detail="Superadmin only")
+    if name not in _EXPORTS:
+        raise HTTPException(status_code=404, detail="Unknown export name")
+
+    if name == "item_tags":
+        rows = (
+            db.query(Item, Tag, ItemTag)
+            .join(ItemTag, Item.id == ItemTag.item_id)
+            .join(Tag, Tag.id == ItemTag.tag_id)
+            .order_by(Item.id, Tag.name)
+            .all()
+        )
+        header = [
+            "item_id", "item_title", "item_url", "item_journal",
+            "item_created_at", "item_auto_ingested",
+            "tag_name", "tag_slug", "vote_count",
+        ]
+        data = [
+            [
+                item.id, item.title, item.url or item.display_url, item.journal,
+                item.created_at.isoformat() if item.created_at else "",
+                item.auto_ingested,
+                tag.name, tag.slug, it.vote_count,
+            ]
+            for item, tag, it in rows
+        ]
+
+    elif name == "items":
+        rows = db.query(Item).order_by(Item.id).all()
+        header = [
+            "id", "title", "url", "display_url", "journal",
+            "first_author", "publication_date", "doi",
+            "created_at", "auto_ingested", "score", "computed_score",
+        ]
+        data = [
+            [
+                r.id, r.title, r.url, r.display_url, r.journal,
+                r.first_author, r.publication_date, r.doi,
+                r.created_at.isoformat() if r.created_at else "",
+                r.auto_ingested, r.score, r.computed_score,
+            ]
+            for r in rows
+        ]
+
+    else:  # tags
+        rows = db.query(Tag).order_by(Tag.name).all()
+        header = ["id", "name", "slug", "vote_count"]
+        data = [[r.id, r.name, r.slug, r.vote_count] for r in rows]
+
+    # Build gzip-compressed CSV in memory
+    buf = _io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(header)
+    writer.writerows(data)
+    csv_bytes = buf.getvalue().encode("utf-8")
+
+    gz_buf = _io.BytesIO()
+    with gzip.GzipFile(fileobj=gz_buf, mode="wb") as gz:
+        gz.write(csv_bytes)
+    gz_buf.seek(0)
+
+    return StreamingResponse(
+        gz_buf,
+        media_type="application/gzip",
+        headers={"Content-Disposition": f'attachment; filename="{name}.csv.gz"'},
+    )
