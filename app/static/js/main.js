@@ -29,10 +29,6 @@ document.addEventListener("click", async (e) => {
       return;
     }
     const data = await res.json();
-    // Update all score elements for this item
-    document.querySelectorAll(`#score-${itemId}`).forEach((el) => {
-      el.textContent = data.score;
-    });
     // Toggle voted class on ALL vote buttons for this item
     document.querySelectorAll(`.vote-btn[data-id="${itemId}"], .vote-btn-lg[data-id="${itemId}"]`).forEach((b) => {
       b.classList.toggle("voted", data.voted);
@@ -188,12 +184,8 @@ document.addEventListener("click", async (e) => {
       const label = b.querySelector(".star-label");
       if (label) label.textContent = data.favorited ? "Favorited" : "Favorite";
     });
-    // If auto-vote fired, reflect the new score and mark vote buttons as voted
+    // If auto-vote fired, mark vote buttons as voted (score updates via cron)
     if (data.auto_voted) {
-      // Update score displays everywhere on the page
-      document.querySelectorAll(`#score-${itemId}`).forEach((el) => {
-        el.textContent = data.score;
-      });
       // Update vote button in the same row (most reliable — avoids attribute selector issues)
       const row = btn.closest("tr");
       if (row) {
