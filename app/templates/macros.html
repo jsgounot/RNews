@@ -9,7 +9,7 @@
       data-id="{{ item.id }}"
       {% if not user %}title="Login to vote"{% endif %}
     >▲</button>
-    <span class="score-val" id="score-{{ item.id }}">{{ item.score }}</span>
+    <span class="score-val" id="score-{{ item.id }}">{{ ((item.computed_score or 0) * 100) | round | int }}</span>
   </td>
 
   {# Col 2: star (favorite) #}
