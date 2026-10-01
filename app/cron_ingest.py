@@ -488,12 +488,14 @@ def _run_part_b(db) -> dict:
                 created_at=created_at,
                 auto_ingested=True,
             )
+            seen_tag_ids: set[int] = set()
             for td in final_tags[:5]:
+                tag = get_or_create_tag(db, td["tag"])
+                if tag.id in seen_tag_ids:
+                    continue
+                seen_tag_ids.add(tag.id)
                 item.item_tags.append(
-                    ItemTag(
-                        tag=get_or_create_tag(db, td["tag"]),
-                        vote_count=tag_vote_count(td),
-                    )
+                    ItemTag(tag=tag, vote_count=tag_vote_count(td))
                 )
             db.add(item)
             db.flush()
