@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Admin — Batch {{ batch.claude_batch_id }}{% endblock %}
+
+{% block content %}
+<div class="page-section">
+  <h2>Ingest batch</h2>
+  <p style="margin-bottom:1.5rem;font-size:.85rem">
+    <span style="font-family:monospace">{{ batch.claude_batch_id }}</span>
+    · submitted {{ batch.submitted_at.strftime("%Y-%m-%d %H:%M") if batch.submitted_at else "—" }}
+    · {{ batch.n_submitted }} sent
+    · {{ batch.status }}{% if batch.retrieved_at %} {{ batch.retrieved_at.strftime("%Y-%m-%d %H:%M") }}{% endif %}
+    · <strong>{{ items | length }} added</strong>
+    <a href="/admin/ingest/reports" style="margin-left:1rem">← Reports</a>
+  </p>
+
+  {% if not items %}
+  <div class="empty-state">
+    {% if batch.status == "pending" %}Batch not retrieved yet.
+    {% else %}No items linked to this batch (batches retrieved before item tracking was added show nothing).{% endif %}
+  </div>
+  {% else %}
+  <table class="items-table" style="font-size:.85rem">
+    <thead>
+      <tr>
+        <th style="text-align:left">Feed date</th>
+        <th style="text-align:left">Pub. date</th>
+        <th style="text-align:left">Journal</th>
+        <th style="text-align:left">Title</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td style="white-space:nowrap">
+          <a href="/day/{{ item.created_at.strftime('%Y-%m-%d') }}">{{ item.created_at.strftime("%Y-%m-%d") }}</a>
+        </td>
+        <td style="white-space:nowrap">{{ item.publication_date or "—" }}</td>
+        <td>{{ item.journal or "" }}</td>
+        <td><a href="/item/{{ item.id }}">{{ item.title }}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

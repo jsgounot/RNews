@@ -97,6 +97,8 @@ def _migrate():
             "ALTER TABLE items ADD COLUMN computed_score REAL",
             "ALTER TABLE items ADD COLUMN computed_score DOUBLE PRECISION",
         ),
+        "ALTER TABLE items ADD COLUMN ingest_batch_id INTEGER REFERENCES ingest_batches(id)",
+        "CREATE INDEX IF NOT EXISTS ix_items_ingest_batch_id ON items (ingest_batch_id)",
     ]
 
     with engine.connect() as conn:

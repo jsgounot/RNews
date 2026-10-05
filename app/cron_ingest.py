@@ -487,6 +487,7 @@ def _run_part_b(db) -> dict:
                 submitter_id=bot_id,
                 created_at=created_at,
                 auto_ingested=True,
+                ingest_batch_id=batch_row.id,
             )
             seen_tag_ids: set[int] = set()
             for td in final_tags[:5]:

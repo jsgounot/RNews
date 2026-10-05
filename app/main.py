@@ -26,7 +26,7 @@ from app.database import get_db, init_db
 from app.models import (
     Comment, CommentVote, Item, ItemTag, ItemTagVote, Tag, User, Vote,
     SavedTag, Team, TeamMember, TeamItem, FavoriteItem,
-    IngestReport, PasswordResetToken,
+    IngestBatch, IngestReport, PasswordResetToken,
 )
 from app.ingest_utils import (
     normalize_doi_url,
@@ -2481,6 +2481,29 @@ def admin_ingest_reports(
     )
     return templates.TemplateResponse(
         request, "admin_ingest_reports.html", {"user": user, "reports": reports}
+    )
+
+
+@app.get("/admin/ingest/batch/{claude_batch_id}", response_class=HTMLResponse)
+def admin_ingest_batch(
+    claude_batch_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_current_user),
+):
+    if not user or not user.is_superadmin:
+        raise HTTPException(status_code=403, detail="Superadmin only")
+    batch = db.query(IngestBatch).filter(IngestBatch.claude_batch_id == claude_batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    items = (
+        db.query(Item)
+        .filter(Item.ingest_batch_id == batch.id)
+        .order_by(Item.created_at.desc())
+        .all()
+    )
+    return templates.TemplateResponse(
+        request, "admin_ingest_batch.html", {"user": user, "batch": batch, "items": items}
     )
 
 

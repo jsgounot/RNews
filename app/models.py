@@ -113,6 +113,9 @@ class Item(Base):
     # Pre-computed hot score (updated hourly by cron_score.py; see app/scoring.py)
     computed_score = Column(Float, nullable=True)
 
+    # Cron batch that created this item (null for manual/bulk submissions and pre-existing rows)
+    ingest_batch_id = Column(Integer, ForeignKey("ingest_batches.id"), nullable=True, index=True)
+
     submitter = relationship("User", foreign_keys=[submitter_id], back_populates="items")
     editor = relationship("User", foreign_keys=[last_edited_by])
     item_tags    = relationship("ItemTag", back_populates="item", cascade="all, delete-orphan", lazy="selectin")

@@ -37,7 +37,7 @@
         <td>{{ r.papers_sent }}</td>
         <td style="font-family:monospace;font-size:.75rem">
           {% if r.claude_batch_submitted %}
-            {{ r.claude_batch_submitted }}
+            <a href="/admin/ingest/batch/{{ r.claude_batch_submitted }}">{{ r.claude_batch_submitted }}</a>
           {% else %}—{% endif %}
         </td>
         <td>{{ r.batches_checked }}</td>
